@@ -1,0 +1,36 @@
+# Safe default profile. Use this until you've researched a specific firm.
+# Every other profile is a config file away.
+name: default_demo
+description: "Demo account profile — no real prop-firm rules in force. Hard limits are generous, internal limits still protect the bot."
+broker: ""
+
+# Firm hard limits
+capital: 100000
+profit_target: 0.10
+daily_loss_limit_pct: 0.03
+max_drawdown_pct: 0.10
+trailing_drawdown: false
+max_open_positions: 3
+max_leverage: 100
+
+# Tooling permissions
+copy_trading_allowed: true
+third_party_signals_allowed: true
+ea_allowed: true
+api_allowed: true
+news_trading_allowed: true
+trading_hours_utc: "00:00-23:59"
+consistency_rule:
+  max_single_day_profit_pct: 1.0
+  enabled: false
+
+# Internal (bot) limits — stricter than firm limits on purpose
+emergency_stop_drawdown_pct: 0.06
+operating_ceiling_drawdown_pct: 0.04
+daily_loss_soft_limit_pct: 0.02
+position_risk_pct: 0.01
+max_orders_per_minute: 2
+max_orders_per_hour: 10
+lot_step: 0.01
+min_lot: 0.01
+max_lot: 10.0

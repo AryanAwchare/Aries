@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Env / secrets
+.env
+.env.local
+
+# Data (raw market data, models, caches)
+data/raw/
+data/processed/
+data/models/
+data/*.db
+data/wf_report.json
+*.parquet
+*.feather
+.cache/
+
+# SIH 2026 knowledge base (separate project — not part of Aries)
+SIH_PS101_KnowledgeBase.md
+
+# Logs
+logs/
+*.log
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Test / tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# OpenCode / IDE
+.opencode/
+.idea/
+.vscode/
+.DS_Store
+
+# OS
+Thumbs.db

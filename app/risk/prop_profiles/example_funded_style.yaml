@@ -1,0 +1,36 @@
+# EXAMPLE FUNDED-STYLE PROFILE — VERIFY RULES AGAINST THE FIRM'S CURRENT
+# TERMS BEFORE USE. This is a research scaffold, not legal advice.
+name: example_funded_style
+description: "Example of a fund-rule profile where copy-trading is NOT allowed (forces pure-ML mode). Rule values are placeholders — confirm each against the firm."
+broker: ""
+
+# Firm hard limits (placeholder numbers — VERIFY)
+capital: 50000
+profit_target: 0.10
+daily_loss_limit_pct: 0.03
+max_drawdown_pct: 0.08
+trailing_drawdown: true
+max_open_positions: 2
+max_leverage: 50
+
+# Tooling permissions — copy-trading banned, pure-ML mode forced
+copy_trading_allowed: false
+third_party_signals_allowed: false
+ea_allowed: true
+api_allowed: true
+news_trading_allowed: false
+trading_hours_utc: "00:00-23:59"
+consistency_rule:
+  max_single_day_profit_pct: 0.30
+  enabled: false  # track first; enforce once you confirm the firm measures it
+
+# Internal (bot) limits
+emergency_stop_drawdown_pct: 0.045
+operating_ceiling_drawdown_pct: 0.03
+daily_loss_soft_limit_pct: 0.015
+position_risk_pct: 0.005
+max_orders_per_minute: 1
+max_orders_per_hour: 6
+lot_step: 0.01
+min_lot: 0.01
+max_lot: 5.0
