@@ -123,6 +123,36 @@ Create `app/risk/prop_profiles/<firm>.yaml` per researched firm and set
   `copy_trading_allowed: false` it is refused outright (API echoes this —
   `POST /api/risk/copy-trading/on` returns 409).
 
+## Leader discovery & two-tier polling
+
+Myfxbook has no webhooks and no discovery API, so the platform splits the work:
+
+- **watch tier** (up to `MAX_WATCH_LEADERS`) — the whole candidate pool, ranked
+  with ONE cheap bulk call (`get-watched-accounts`) every 12h. Scores are
+  persisted to `data/roster.json` (`LEADER_ROSTER_PATH`).
+- **live tier** (up to `MAX_LIVE_LEADERS`) — only these are polled for real
+  trades (`get-open-trades` / `get-history`) each cycle, so per-account API
+  requests stay bounded and under Myfxbook's rate limits.
+
+Finding leaders is a **one-time** manual step (browse Myfxbook's Top Systems /
+Follow pages on myfxbook.com); after that the roster auto-selects the best
+performers and rotates underperformers back to watch.
+
+```
+python -m app.cli scan-leaders list                 # show the roster
+python -m app.cli scan-leaders add-check --id <id>  # verify one candidate trades gold
+python -m app.cli scan-leaders --add <id> --name X  # add a candidate manually
+python -m app.cli scan-leaders scan                 # dry run: rank the watch list
+python -m app.cli scan-leaders scan --apply         # promote/demote + save roster
+python -m app.cli scan-leaders --live id1,id2       # force the live tier
+python -m app.cli poll-leaders                      # poll just the live tier once
+GET /api/leaders/roster                             # tiers, scores, observations
+```
+
+Promotion only happens after `LEADER_MIN_OBSERVATIONS` scans (default 3), so a
+brand-new account can't jump straight to live on one lucky day. Expected
+detection lag is ~5 min (one Myfxbook poll) vs an M15 gold bar — by design.
+
 ## Open items (from the build plan)
 
 1. **Prop-firm research** → turn 2–3 candidate firms into `prop_profiles/*.yaml`

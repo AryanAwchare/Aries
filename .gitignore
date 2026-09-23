@@ -16,6 +16,7 @@ data/processed/
 data/models/
 data/*.db
 data/wf_report.json
+data/roster.json
 *.parquet
 *.feather
 .cache/

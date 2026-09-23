@@ -33,6 +33,39 @@ async def list_leaders(session: AsyncSession = Depends(_session)):
     ]
 
 
+@router.get("/roster")
+async def roster(request: Request):
+    """Two-tier roster: watch pool, live tier, scores, observations."""
+    from ...leaders.discovery import LeaderRoster
+
+    settings = request.app.state.settings
+    roster = LeaderRoster(
+        settings.roster_path,
+        max_live=settings.max_live_leaders,
+        max_watch=settings.max_watch_leaders,
+        min_observations=settings.leader_min_observations,
+    )
+    candidates = sorted(
+        (roster.get(i) for i in roster.all_ids()),
+        key=lambda c: (c.tier != "live", -c.watch_score),
+    )
+    return {
+        "live": roster.live_ids(),
+        "watch": roster.watch_ids(),
+        "candidates": [
+            {
+                "id": c.id,
+                "name": c.name,
+                "tier": c.tier,
+                "watch_score": round(c.watch_score, 4),
+                "observations": c.observations,
+                "source": c.source,
+            }
+            for c in candidates
+        ],
+    }
+
+
 @router.get("/{leader_id}/scores")
 async def leader_scores(leader_id: str, session: AsyncSession = Depends(_session)):
     stmt = (

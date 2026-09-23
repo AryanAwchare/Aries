@@ -7,8 +7,10 @@ data.
 
 API surface used:
   * login.json                          -> session
-  * get-history.json?id=<leaderId>      -> closed trades
-  * get-open-trades.json?id=<leaderId>  -> currently open trades
+  * get-history.json?id=<leaderId>      -> closed trades            (live tier)
+  * get-open-trades.json?id=<leaderId>  -> currently open trades    (live tier)
+  * get-watched-accounts.json           -> bulk aggregate stats     (watch tier, 1 call)
+  * get-account-info.json?id=<leaderId> -> single-account aggregate stats
 """
 from __future__ import annotations
 
@@ -17,6 +19,7 @@ from datetime import datetime
 import httpx
 
 from ..logging import get_logger
+from .discovery import WatchStats, parse_watch_stats
 from .models import RawLeaderTrade
 
 log = get_logger(__name__)
@@ -46,10 +49,15 @@ class MyfxbookClient:
             params={"email": self._email, "password": self._password},
         )
         data = resp.json()
-        if not data.get("authenticated"):
-            raise PermissionError(f"Myfxbook login failed: {data.get('error')}")
-        self._session_key = data["session"]
-        return self._session_key
+        session = data.get("session")
+        if session:
+            self._session_key = session
+            return session
+        # Myfxbook schema: {"error": true|false, "message": "...", "session": "..."}
+        if data.get("error"):
+            message = data.get("message") or data.get("error")
+            raise PermissionError(f"Myfxbook login failed: {message}")
+        raise PermissionError(f"Myfxbook login response missing session: {data}")
 
     async def _get(self, endpoint: str, **params) -> list[dict]:
         async with httpx.AsyncClient(timeout=self._timeout) as client:
@@ -76,6 +84,33 @@ class MyfxbookClient:
             t.is_open = True
             out.append(t)
         return out
+
+    # ------------------------------------------------------------------
+    # Two-tier support: cheap bulk aggregate stats for the watch tier.
+    # One API call for the entire watch list instead of per-account polling.
+    # ------------------------------------------------------------------
+    async def get_watched_accounts(self) -> list[WatchStats]:
+        """Bulk aggregate stats for every account on your Myfxbook watch list."""
+        data = await self._get_data("get-watched-accounts.json")
+        rows = data.get("accounts") or []
+        return [parse_watch_stats(r) for r in rows]
+
+    async def get_account_stats(self, leader_id: str) -> WatchStats:
+        """Aggregate stats for one candidate, via ``get-account-info``."""
+        data = await self._get_data("get-account-info.json", id=leader_id)
+        return parse_watch_stats(data.get("account") or {})
+
+    async def _get_data(self, endpoint: str, **params) -> dict:
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            session = await self._login(client)
+            resp = await client.get(
+                f"{self._base_url}/{endpoint}",
+                params={"session": session, **params},
+            )
+            data = resp.json()
+            if data.get("error"):
+                log.warning("Myfxbook error on %s: %s", endpoint, data.get("error"))
+            return data
 
     # ------------------------------------------------------------------
     @staticmethod

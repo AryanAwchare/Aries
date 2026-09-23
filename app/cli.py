@@ -113,9 +113,9 @@ async def cmd_replay(args) -> None:
 
 async def cmd_poll_once(args) -> None:
     from .config import get_settings
-    from .leaders.myfxbook import MyfxbookClient
-    from .scheduler.jobs import poll_leader_trades
     from .db.base import Database
+    from .leaders.myfxbook import MyfxbookClient
+    from .leaders.poll import poll_leader_trades
 
     settings = get_settings()
     if not settings.myfxbook_email:
@@ -124,7 +124,80 @@ async def cmd_poll_once(args) -> None:
     await db.create_all()
     client = MyfxbookClient(settings.myfxbook_email, settings.myfxbook_password)
     inserted = await poll_leader_trades(settings, db.session_factory, client)
-    print(f"polled leaders; inserted {inserted} events")
+    print(f"polled live-tier leaders; inserted {inserted} events")
+
+
+async def cmd_scan_leaders(args) -> None:
+    """Discover + rank leaders from the Myfxbook watch list; rotate to live.
+
+    Myfxbook has no discovery API — you add candidate accounts on myfxbook.com
+    (Top Systems / Follow) once, then this ranks the whole pool with one bulk
+    call and promotes the top ``max_live`` performers to the live tier.
+    """
+    from .config import get_settings
+    from .db.base import Database
+    from .leaders.discovery import LeaderRoster
+    from .leaders.myfxbook import MyfxbookClient
+    from .leaders.poll import refresh_leader_roster
+
+    settings = get_settings()
+    roster = LeaderRoster(
+        settings.roster_path,
+        max_live=settings.max_live_leaders,
+        max_watch=settings.max_watch_leaders,
+        min_observations=settings.leader_min_observations,
+    )
+
+    if args.add:
+        ok = roster.add(args.add, name=args.name or "", source="manual", url=args.url or "")
+        print(("added" if ok else "already known") + f": {args.add}")
+    if args.remove:
+        print("removed" if roster.remove(args.remove) else f"not found: {args.remove}")
+    if args.live:
+        roster.set_live([s.strip() for s in args.live.split(",") if s.strip()])
+        print(f"live tier set to: {roster.live_ids()}")
+
+    if args.action == "list":
+        _print_roster(settings, roster)
+        return
+
+    if not settings.myfxbook_email:
+        raise SystemExit("MYFXBOOK_EMAIL / MYFXBOOK_PASSWORD not configured")
+
+    db = Database(settings)
+    await db.create_all()
+    client = MyfxbookClient(settings.myfxbook_email, settings.myfxbook_password)
+
+    if args.action == "scan":
+        result = await refresh_leader_roster(settings, client, db.session_factory, apply=args.apply)
+        summary = result.get("error") or f"{result['watched']} candidates"
+        print(f"watch list scan: {summary}")
+        print(f"promoted -> live: {result['promoted']}")
+        print(f"demoted -> watch: {result['demoted']}")
+        print(result["note"])
+        _print_roster(settings, roster)
+
+    elif args.action == "add-check":
+        if not args.id:
+            raise SystemExit("usage: scan-leaders add-check --id <accountId>")
+        stats = await client.get_account_stats(args.id)
+        print(f"{stats.account_id}  {stats.name or '(no name)'}  "
+              f"gain={stats.gain_pct:.2f}%  dd={stats.drawdown_pct:.2f}%  trades={stats.trades}")
+        print("run `scan-leaders --add <id>` to put it on the watch tier")
+
+
+def _print_roster(settings, roster) -> None:
+    from .leaders.discovery import rank_watch_stats
+
+    rows = sorted(roster.all_ids(), key=lambda i: (roster.get(i).watch_score, roster.get(i).observations), reverse=True)
+    print("-" * 78)
+    print(f"{'tier':<6} {'id':<16} {'score':>6} {'obs':>4}  name")
+    print("-" * 78)
+    for leader_id in rows:
+        c = roster.get(leader_id)
+        print(f"{c.tier:<6} {leader_id:<16} {c.watch_score:>6.3f} {c.observations:>4}  {c.name or ''}")
+    print(f"live={len(roster.live_ids())}/{settings.max_live_leaders}  "
+          f"watch={len(roster.watch_ids())}/{settings.max_watch_leaders}  file={settings.roster_path}")
 
 
 async def _load_ohlcv(settings, args):
@@ -152,8 +225,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser("setup-db", help="create the database schema")
 
-    sp = sub.add_parser("poll-leaders", help="poll Myfxbook leaders once")
+    sp = sub.add_parser("poll-leaders", help="poll Myfxbook live-tier leaders once")
     sp.add_argument("--once", action="store_true")
+
+    sp = sub.add_parser("scan-leaders", help="discover, rank and rotate leaders (two-tier)")
+    sp.add_argument("action", nargs="?", default="scan", choices=["scan", "list", "add-check"],
+                    help="scan=rank the watch list (default), list=show roster, add-check=verify one id")
+    sp.add_argument("--apply", action="store_true", help="persist the rotation (default: dry run)")
+    sp.add_argument("--add", help="add a candidate account id to the watch tier")
+    sp.add_argument("--name", help="name for --add")
+    sp.add_argument("--url", help="myfxbook URL for --add")
+    sp.add_argument("--remove", help="remove an account id from the roster")
+    sp.add_argument("--live", help="comma-separated ids to force as the live tier")
+    sp.add_argument("--id", help="account id for add-check")
 
     sp = sub.add_parser("backtest", help="run the hybrid-signal backtest")
     sp.add_argument("--synthetic", action="store_true", help="use deterministic synthetic data")
@@ -179,6 +263,8 @@ def main() -> None:
         asyncio.run(cmd_setup_db(args))
     elif args.command == "poll-leaders":
         asyncio.run(cmd_poll_once(args))
+    elif args.command == "scan-leaders":
+        asyncio.run(cmd_scan_leaders(args))
     elif args.command == "backtest":
         asyncio.run(cmd_backtest(args))
     elif args.command == "walk-forward":

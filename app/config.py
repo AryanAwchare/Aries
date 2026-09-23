@@ -55,6 +55,12 @@ class Settings(BaseSettings):
     myfxbook_leaders: str = ""
     myfxbook_poll_interval_seconds: int = 300
 
+    # --- Leader roster (two-tier discovery) --------------------------------
+    leader_roster_path: str = "data/roster.json"
+    max_live_leaders: int = 5
+    max_watch_leaders: int = 50
+    leader_min_observations: int = 3
+
     # --- Kronos / forecast -------------------------------------------------
     kronos_model_path: str = ""
     predict_horizon_bars: int = 24
@@ -110,6 +116,11 @@ class Settings(BaseSettings):
     @property
     def prop_profile_path(self) -> Path:
         return BASE_DIR / "app" / "risk" / "prop_profiles" / f"{self.active_prop_profile}.yaml"
+
+    @property
+    def roster_path(self) -> Path:
+        p = Path(self.leader_roster_path)
+        return p if p.is_absolute() else BASE_DIR / p
 
     def ensure_dirs(self) -> None:
         (DATA_DIR / "raw").mkdir(parents=True, exist_ok=True)
