@@ -4,19 +4,24 @@ from __future__ import annotations
 from ..config import TradingMode
 
 
-def resolve_execution_client(settings) -> object:
-    """Pick the ExecutionClient for the active trading mode.
+def resolve_execution_client(settings, session_factory=None) -> object:
+    """Pick the ExecutionClient for the active trading mode + driver.
 
     * backtest/replay → used only for historical loops (no broker client)
-    * paper           → PaperBroker against the demo account's market data
-    * prop_eval / live → MetaApiClient against prop / live credentials
+    * paper           → PaperBroker by default, or EaBroker if EXECUTION_DRIVER=ea
+    * prop_eval / live → driver-dependent: EaBroker (local MT5) or MetaApiClient
 
     The client itself carries NO mode — mode is enforced here + by the risk
     engine's profile gate.
     """
-    from .base import MetaApiClient, PaperBroker
-
     mode = settings.trading_mode
+
+    if settings.execution_driver == "ea":
+        from .ea_bridge import EaBroker
+        if session_factory is None:
+            raise RuntimeError("EXECUTION_DRIVER=ea requires a session_factory")
+        return EaBroker(settings, session_factory)
+
     if mode in (TradingMode.PAPER, TradingMode.BACKTEST, TradingMode.REPLAY):
         return PaperBroker()
     if not settings.metaapi_token:

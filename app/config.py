@@ -49,6 +49,14 @@ class Settings(BaseSettings):
     metas_api_demo_account_id: str = ""
     metas_api_prop_account_id: str = ""
 
+    # --- Execution driver ------------------------------------------------
+    # metaapi → MetaApi cloud SDK (needs METAAPI_TOKEN)
+    # ea      → local MetaTrader terminal polls this platform over HTTP
+    # paper   → fills instantly in-process (tests / replay / dry runs)
+    execution_driver: str = "paper"
+    ea_api_key: str = ""
+    ea_order_timeout_seconds: int = 60
+
     # --- Myfxbook ---------------------------------------------------------
     myfxbook_email: str = ""
     myfxbook_password: str = ""
@@ -101,6 +109,15 @@ class Settings(BaseSettings):
     @classmethod
     def _empty_to_default(cls, v: object) -> str:
         return v if isinstance(v, str) else ""
+
+    @field_validator("execution_driver", mode="before")
+    @classmethod
+    def _normalise_driver(cls, v: object) -> str:
+        if isinstance(v, str):
+            v = v.strip().lower()
+            if v not in ("metaapi", "ea", "paper"):
+                raise ValueError(f"invalid execution_driver: {v!r}")
+        return v or "paper"
 
     # ---- computed helpers -------------------------------------------------------
 

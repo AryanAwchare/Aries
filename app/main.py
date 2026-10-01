@@ -48,9 +48,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Gold Hybrid Copy-Trading Platform", version="0.1.0", lifespan=lifespan)
 
 from .api.routes import health, leaders, modes, risk, signals  # noqa: E402
+from .execution.ea_bridge import router as ea_router  # noqa: E402
 
 app.include_router(health.router)
 app.include_router(leaders.router)
 app.include_router(signals.router)
 app.include_router(risk.router)
 app.include_router(modes.router)
+app.include_router(ea_router)

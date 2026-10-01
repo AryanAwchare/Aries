@@ -160,6 +160,34 @@ class OrderRecord(Base):
     signal: Mapped[SignalDecision | None] = relationship(back_populates="order")
 
 
+class EaOrder(Base):
+    """Bridge order the local MT5 terminal (EA) polls and fills.
+
+    The EA talks HTTP to the platform, never to the DB directly, so this works
+    over SQLite locally or Postgres/Supabase in the cloud. One row per order;
+    the EA's ``external_id`` is echoed back by the follow-up execution report so
+    the fill can be matched to the order it actually executed.
+    """
+
+    __tablename__ = "ea_orders"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid)
+    external_id: Mapped[str] = mapped_column(String(64), index=True)  # ticket the EA reports back
+    order_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    side: Mapped[TradeSide] = mapped_column(Enum(TradeSide))
+    volume: Mapped[float] = mapped_column(Float, default=0.0)
+    stop_loss: Mapped[float | None] = mapped_column(Float, nullable=True)
+    take_profit: Mapped[float | None] = mapped_column(Float, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="pending")  # pending|dispatched|filled|rejected
+    broker_order_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    fill_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, index=True)
+    dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class AuditLogEntry(Base):
     """Fully-append-only audit trail — every gate decision, override, kill switch."""
 
