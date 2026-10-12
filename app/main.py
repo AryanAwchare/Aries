@@ -47,12 +47,23 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Gold Hybrid Copy-Trading Platform", version="0.1.0", lifespan=lifespan)
 
-from .api.routes import health, leaders, modes, risk, signals  # noqa: E402
+from fastapi.responses import FileResponse, HTMLResponse  # noqa: E402
+from .api.routes import dashboard, health, leaders, modes, risk, signals  # noqa: E402
 from .execution.ea_bridge import router as ea_router  # noqa: E402
 
+app.include_router(dashboard.router)
 app.include_router(health.router)
 app.include_router(leaders.router)
 app.include_router(signals.router)
 app.include_router(risk.router)
 app.include_router(modes.router)
 app.include_router(ea_router)
+
+_static_index = BASE_DIR / "app" / "static" / "index.html"
+
+@app.get("/", response_class=HTMLResponse)
+@app.get("/dashboard", response_class=HTMLResponse)
+async def serve_dashboard():
+    if _static_index.exists():
+        return FileResponse(_static_index)
+    return HTMLResponse("<h1>Aries Platform Running</h1><p><a href='/docs'>Swagger API Docs</a></p>")

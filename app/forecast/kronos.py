@@ -59,28 +59,41 @@ class KronosForecaster:
         not matter.
         """
         model = self._load_model()
-        if model is False:
-            return 0.0, 0.0
+        if model is not False:
+            try:
+                import torch
 
-        try:
-            import torch
+                series = np.asarray(closes, dtype=np.float32)
+                context = torch.tensor(series, dtype=torch.float32).unsqueeze(0) if series.ndim == 1 else torch.tensor(series, dtype=torch.float32)
+                forecast, forecast_std = model.predict(context, self.horizon)
+                f = np.asarray(forecast[0], dtype=np.float32).squeeze()
+                s = np.asarray(forecast_std[0], dtype=np.float32).squeeze()
+                last = float(series[-1]) if len(series) else 1.0
+                if last > 0:
+                    pct = float((f[-1] - last) / last) * 100.0
+                    std_pct = float(np.nanmean(s) / last) * 100.0
+                    confidence = float(np.clip(1.0 - std_pct / 1.0, 0.0, 0.95))
+                    return pct, confidence
+            except Exception as exc:  # pragma: no cover
+                log.warning("Kronos predict failed (%s) — using momentum slope fallback", exc)
 
-            series = np.asarray(closes, dtype=np.float32)
-            context = torch.tensor(series, dtype=torch.float32).unsqueeze(0) if series.ndim == 1 else torch.tensor(series, dtype=torch.float32)
-            forecast, forecast_std = model.predict(context, self.horizon)
-            f = np.asarray(forecast[0], dtype=np.float32).squeeze()
-            s = np.asarray(forecast_std[0], dtype=np.float32).squeeze()
-            last = float(series[-1]) if len(series) else 1.0
-            if last <= 0:
-                return 0.0, 0.0
-            pct = float((f[-1] - last) / last) * 100.0
-            # confidence proxy: lower forecast std => higher confidence
-            std_pct = float(np.nanmean(s) / last) * 100.0
-            confidence = float(np.clip(1.0 - std_pct / 1.0, 0.0, 0.95))
-            return pct, confidence
-        except Exception as exc:  # pragma: no cover - torch/mps edge cases
-            log.warning("Kronos predict failed (%s) — neutral forecast", exc)
-            return 0.0, 0.0
+        # Fallback to stationary EMA momentum slope per AGENTS.md rule 2.1
+        if closes is None or len(closes) < 10:
+            return 0.0, 0.5
+        series = np.asarray(closes, dtype=np.float64)
+        last = float(series[-1])
+        if last <= 0:
+            return 0.0, 0.5
+
+        import pandas as pd
+
+        s = pd.Series(series)
+        ema12 = float(s.ewm(span=12, adjust=False).mean().iloc[-1])
+        ema26 = float(s.ewm(span=26, adjust=False).mean().iloc[-1])
+        slope_pct = float((ema12 - ema26) / last * 100.0)
+        forecast_pct = round(float(slope_pct * (self.horizon / 12.0)), 4)
+        confidence = round(float(np.clip(0.50 + abs(slope_pct) * 2.5, 0.40, 0.92)), 3)
+        return forecast_pct, confidence
 
 
 class NeutralForecaster:

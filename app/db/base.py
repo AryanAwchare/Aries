@@ -1,4 +1,4 @@
-﻿"""Async database engine/session management (SQLAlchemy 2.0)."""
+"""Async database engine/session management (SQLAlchemy 2.0)."""
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
@@ -18,6 +18,8 @@ def create_sessionmaker(settings: Settings, echo: bool = False) -> async_session
     engine_kwargs = {"echo": echo, "future": True}
     if not url.startswith("sqlite"):
         engine_kwargs["pool_pre_ping"] = True
+        if "asyncpg" in url:
+            engine_kwargs["connect_args"] = {"statement_cache_size": 0}
     engine = create_async_engine(url, **engine_kwargs)
     return async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
@@ -31,6 +33,8 @@ class Database:
         engine_kwargs = {"echo": echo, "future": True}
         if not url.startswith("sqlite"):
             engine_kwargs["pool_pre_ping"] = True
+            if "asyncpg" in url:
+                engine_kwargs["connect_args"] = {"statement_cache_size": 0}
         self.engine = create_async_engine(url, **engine_kwargs)
         self.session_factory = async_sessionmaker(self.engine, expire_on_commit=False, class_=AsyncSession)
 
