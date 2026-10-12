@@ -46,7 +46,7 @@ def candidate_events(df: pd.DataFrame, min_move_pct: float = 0.05) -> pd.DataFra
 def build_training_data(
     ohlcv: pd.DataFrame,
     cot: dict[str, float] | None = None,
-    horizon_bars: int = 8,
+    horizon_bars: int = 16,
     min_move_pct: float = 0.05,
 ) -> pd.DataFrame:
     """Feature rows + ``label`` for every candidate event.

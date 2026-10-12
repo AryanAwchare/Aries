@@ -139,7 +139,7 @@ def time_slices(df: pd.DataFrame, train_end: str, val_end: str, test_end: str) -
 
 
 def run_fold(name, ohlcv_train, ohlcv_val, ohlcv_test, cot=None,
-             horizon_bars: int = 8, out_dir: Path | None = None) -> FoldResult:
+             horizon_bars: int = 16, out_dir: Path | None = None) -> FoldResult:
     train_df = build_training_data(ohlcv_train, cot, horizon_bars)
     val_df = build_training_data(ohlcv_val, cot, horizon_bars)
     test_df = build_training_data(ohlcv_test, cot, horizon_bars)
@@ -192,9 +192,11 @@ def run_fold(name, ohlcv_train, ohlcv_val, ohlcv_test, cot=None,
 
 
 def walk_forward(ohlcv, cot=None, *, train_end=..., val_end=..., test_end=...,
+                 horizon_bars: int = 16,
                  out_dir: Path | None = None) -> list[FoldResult]:
     slices = time_slices(ohlcv, train_end, val_end, test_end)
-    fold = run_fold("wf_main", slices["train"], slices["validation"], slices["test"], cot, out_dir=out_dir)
+    fold = run_fold("wf_main", slices["train"], slices["validation"], slices["test"], cot,
+                    horizon_bars=horizon_bars, out_dir=out_dir)
     return [fold]
 
 

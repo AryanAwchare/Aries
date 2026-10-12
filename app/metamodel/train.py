@@ -57,15 +57,28 @@ def train_xgboost(X_train, y_train, X_val, y_val, **params) -> TrainResult:
         raise RuntimeError("xgboost is not installed; run: pip install -r requirements.txt")
     kwargs = dict(params or {})
     kwargs.setdefault("n_estimators", 500)
-    kwargs.setdefault("max_depth", 4)
-    kwargs.setdefault("learning_rate", 0.05)
-    kwargs.setdefault("subsample", 0.9)
-    kwargs.setdefault("colsample_bytree", 0.8)
+    kwargs.setdefault("max_depth", 5)
+    kwargs.setdefault("learning_rate", 0.03)
+    kwargs.setdefault("subsample", 0.8)
+    kwargs.setdefault("colsample_bytree", 0.7)
+    kwargs.setdefault("min_child_weight", 5)
+    kwargs.setdefault("gamma", 1.0)
     kwargs.setdefault("eval_metric", "logloss")
-    kwargs.setdefault("early_stopping_rounds", 25)
+    kwargs.setdefault("early_stopping_rounds", 30)
+    kwargs.setdefault("use_label_encoder", False)
+
+    # --- Class imbalance correction (CRITICAL) ---
+    # With 97:3 imbalance, XGBoost predicts everything as class-0 without this.
+    # scale_pos_weight = neg_count / pos_count  forces equal weighting.
+    if "scale_pos_weight" not in kwargs:
+        neg = int((y_train == 0).sum())
+        pos = int((y_train == 1).sum())
+        spw = neg / max(pos, 1)
+        kwargs["scale_pos_weight"] = spw
+        log.info("Auto scale_pos_weight=%.1f  (neg=%d pos=%d)", spw, neg, pos)
 
     model = xgb.XGBClassifier(
-        **{k: v for k, v in kwargs.items() if k not in ("early_stopping_rounds", "eval_metric")},
+        **{k: v for k, v in kwargs.items() if k not in ("early_stopping_rounds", "eval_metric", "use_label_encoder")},
         early_stopping_rounds=kwargs["early_stopping_rounds"],
         eval_metric=kwargs["eval_metric"],
     )

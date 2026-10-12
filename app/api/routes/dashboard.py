@@ -19,7 +19,7 @@ from ...config import BASE_DIR
 from ...data.macro import MacroProvider
 from ...db.base import Database
 from ...db.models import Signal, SignalDecision, SignalStatus, TradeSide
-from ...features.build_features import calculate_indicator_block
+from ...features.build_features import build_feature_row
 from ...features.regime import MarketRegime, detect_regimes
 from ...forecast.kronos import KronosForecaster
 from ...logging import get_logger
@@ -216,9 +216,8 @@ def _get_mt5_candles_sync(symbol: str = "XAUUSD", timeframe: str = "M15", count:
 
 
 def _calculate_live_intel_sync(symbol: str = "XAUUSD") -> Dict[str, Any]:
-    """Computes real-time quantitative features: Regime, Kronos slope, Macro bias, News blackout, XGBoost probability."""
+    """Computed real-time quantitative features: Regime, Kronos slope, Macro bias, News blackout, XGBoost probability."""
     import pandas as pd
-    import numpy as np
 
     # 1. Fetch latest bars for technical feature computation
     candles = _get_mt5_candles_sync(symbol=symbol, timeframe="M15", count=150)
@@ -257,31 +256,13 @@ def _calculate_live_intel_sync(symbol: str = "XAUUSD") -> Dict[str, Any]:
     macro_note = "Bullish Gold (Weak DXY/Yields)" if macro_score > 0.1 else ("Bearish Gold (Strong USD)" if macro_score < -0.1 else "DXY & 10Y Rangebound")
 
     # 6. XGBoost Meta-Model Inference
-    indicators = calculate_indicator_block(df)
-    last_ind = indicators.iloc[-1].to_dict() if len(indicators) else {}
-    
-    # Compose feature vector
-    feature_row = {
-        "rsi": float(last_ind.get("rsi", 50.0)),
-        "macd": float(last_ind.get("macd", 0.0)),
-        "macd_hist": float(last_ind.get("macd_hist", 0.0)),
-        "atr_pct": float(last_ind.get("atr_pct", 0.002)),
-        "vol_20": float(last_ind.get("vol_20", 0.001)),
-        "vol_regime": float(last_ind.get("vol_regime", 1.0)),
-        "volume_z": float(last_ind.get("volume_z", 0.0)),
-        "trend_strength": float(last_ind.get("trend_strength", 0.0)),
-        "session": float(last_ind.get("session", 1.0)),
-        "hour": float(datetime.now(timezone.utc).hour),
-        "dow_cos": float(np.cos(datetime.now(timezone.utc).weekday() * 2 * np.pi / 7)),
-        "dow_sin": float(np.sin(datetime.now(timezone.utc).weekday() * 2 * np.pi / 7)),
-        "cot_mm_net_z": 0.0,
-        "cot_mm_net_oi": 0.0,
-        "cot_producer_net_oi": 0.0,
-        "kronos_forecast_pct": float(kronos_pct),
-        "kronos_conf": float(kronos_conf),
-        "side_buy": 1.0,
-        "side_sell": 0.0,
-    }
+    # Compose feature vector via the canonical builder so the schema can never
+    # drift from the trained model's expected columns.
+    feature_row = build_feature_row(
+        df, cot=None, kronos_forecast_pct=float(kronos_pct), kronos_conf=float(kronos_conf)
+    )
+    feature_row["side_buy"] = 1.0
+    feature_row["side_sell"] = 0.0
 
     p_up = _meta_predictor.predict(feature_row) if _meta_predictor.available else 0.50
     calibrated_conf = round(abs(p_up - 0.5) * 2.0, 2)

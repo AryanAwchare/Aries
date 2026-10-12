@@ -38,10 +38,25 @@ async def lifespan(app: FastAPI):
 
     if settings.kill_switch_enabled:
         app.state.kill_switch.enable()
+
+    scheduler = None
+    if settings.myfxbook_email:
+        from .leaders.myfxbook import MyfxbookClient
+        from .scheduler.jobs import build_scheduler
+
+        myfxbook = MyfxbookClient(settings.myfxbook_email, settings.myfxbook_password)
+        scheduler = build_scheduler(settings, db.session_factory, myfxbook)
+        scheduler.start()
+        app.state.scheduler = scheduler
+        log.info("Background scheduler started")
+    else:
+        app.state.scheduler = None
     log.info("Platform booted in mode=%s profile=%s", settings.trading_mode.value, settings.active_prop_profile)
 
     yield
 
+    if app.state.scheduler is not None:
+        scheduler.shutdown(wait=False)
     await db.dispose()
 
 

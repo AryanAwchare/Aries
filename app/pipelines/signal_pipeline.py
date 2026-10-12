@@ -88,15 +88,30 @@ class SignalPipeline:
 
         # verb == "copy": continue through risk + execution
         entry_ref = event.open_price or float(ohlcv.iloc[-1]["close"])
+        atr_dist = _atr_stop_points(ohlcv)
         account = AccountState(
             equity=self.risk.profile.capital,
             high_water_mark=self.risk.profile.capital,
             daily_start_balance=self.risk.profile.capital,
         )
         exec_outcome = await self.executor.execute_signal(
-            session, decision, account, entry_ref_price=entry_ref, stop_points=5.0
+            session, decision, account, entry_ref_price=entry_ref, stop_points=atr_dist
         )
         return "filled" if exec_outcome.order and exec_outcome.order.status == "filled" else exec_outcome.message
+
+
+def _atr_stop_points(ohlcv) -> float:
+    """Distance for stop-loss/take-profit as 1.5x ATR(14), in price units."""
+    import numpy as np
+
+    from ..features.indicators import atr
+
+    if ohlcv is None or len(ohlcv) < 15:
+        return 5.0
+    a = atr(ohlcv).iloc[-1]
+    if not np.isfinite(a) or a <= 0:
+        return 5.0
+    return float(round(1.5 * a, 2))
 
 
 def _lookback(settings: Settings) -> object:
