@@ -1,4 +1,4 @@
-"""Technical indicators for XAUUSD feature vectors.
+﻿"""Technical indicators for XAUUSD feature vectors.
 
 Implemented in pure pandas so tests and the backtest harness never depend
 on optional packages; ``pandas_ta`` is used when present for the classics.
@@ -10,6 +10,8 @@ import pandas as pd
 
 
 def rsi(close: pd.Series, period: int = 14) -> pd.Series:
+    if close.empty:
+        return pd.Series([], dtype=float, index=close.index)
     delta = close.diff()
     gain = delta.clip(lower=0.0)
     loss = -delta.clip(upper=0.0)
@@ -21,6 +23,8 @@ def rsi(close: pd.Series, period: int = 14) -> pd.Series:
 
 
 def macd(close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
+    if close.empty:
+        return pd.DataFrame({"macd": [], "macd_signal": [], "macd_hist": []}, index=close.index)
     ema_fast = close.ewm(span=fast, adjust=False).mean()
     ema_slow = close.ewm(span=slow, adjust=False).mean()
     line = ema_fast - ema_slow
@@ -30,6 +34,8 @@ def macd(close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
 
 
 def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    if df.empty:
+        return pd.Series([], dtype=float, index=df.index)
     high, low, close = df["high"], df["low"], df["close"]
     prev_close = close.shift(1)
     tr = pd.concat(
@@ -40,51 +46,46 @@ def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
         ],
         axis=1,
     ).max(axis=1)
-    first = tr.iloc[0]
-    # ewm from bar 0 (no min_periods) keeps the warm-up causal and positive
+    first = tr.iloc[0] if not tr.empty else 0.0
     return tr.ewm(alpha=1 / period, adjust=False).mean().fillna(first)
 
 
 def rolling_volatility(close: pd.Series, period: int = 20, annualize: int | None = None) -> pd.Series:
+    if close.empty:
+        return pd.Series([], dtype=float, index=close.index)
     ret = close.pct_change()
     vol = ret.rolling(period, min_periods=period // 2).std()
     if annualize:
         vol = vol * np.sqrt(annualize)
-    return vol
+    return vol.fillna(0.0)
 
 
-def volume_zscore(volume: pd.Series, period: int = 20) -> pd.Series:
-    mean = volume.rolling(period, min_periods=period // 2).mean()
-    std = volume.rolling(period, min_periods=period // 2).std().replace(0, 1)
-    return (volume - mean) / std
+def volatility_regime(close: pd.Series, period: int = 20) -> pd.Series:
+    if close.empty:
+        return pd.Series([], dtype=float, index=close.index)
+    vol = rolling_volatility(close, period=period)
+    vol_mean = vol.rolling(100, min_periods=20).mean()
+    vol_std = vol.rolling(100, min_periods=20).std().replace(0, np.nan)
+    z = ((vol - vol_mean) / vol_std).fillna(0.0)
+    return pd.cut(
+        z,
+        bins=[-np.inf, -0.5, 0.5, 2.0, np.inf],
+        labels=[0, 1, 2, 3],
+    ).astype(float).fillna(1.0)
 
 
-def trend_strength(close: pd.Series, period: int = 20) -> pd.Series:
-    """Directional slope of a simple short/long MA ratio: a lightweight trend filter."""
-    ema_fast = close.ewm(span=10, adjust=False).mean()
-    ema_slow = close.ewm(span=period, adjust=False).mean()
-    return (ema_fast - ema_slow) / ema_slow.replace(0, np.nan) * 1000.0
+def trend_strength(close: pd.Series, fast: int = 20, slow: int = 50) -> pd.Series:
+    if close.empty:
+        return pd.Series([], dtype=float, index=close.index)
+    ema_fast = close.ewm(span=fast, adjust=False).mean()
+    ema_slow = close.ewm(span=slow, adjust=False).mean()
+    raw = (ema_fast - ema_slow) / ema_slow.replace(0, np.nan)
+    return raw.fillna(0.0)
 
 
-def volatility_regime(vol: pd.Series, window: int = 90) -> pd.Series:
-    """Regime as a percentile of recent realised volatility: 0 calm, 1 stressed."""
-    rank = vol.rolling(window, min_periods=window // 2).rank(pct=True)
-    return rank.fillna(0.5)
-
-
-def session_of(timestamp_index: pd.DatetimeIndex) -> pd.Series:
-    """One-hot-ish session feature. Gold moves most during London/NY overlap."""
-    hour = timestamp_index.hour
-    return pd.Series(
-        np.select(
-            [
-                (hour >= 13) & (hour < 17),
-                (hour >= 7) & (hour <= 12),
-                (hour >= 17) | (hour < 0),
-            ],
-            [2.0, 1.0, 3.0],  # london, london-ny pairs -> london; overlap=2 after 13
-            default=0.0,
-        ),
-        index=timestamp_index,
-        name="session",
-    )
+def volume_zscore(volume: pd.Series, period: int = 50) -> pd.Series:
+    if volume.empty:
+        return pd.Series([], dtype=float, index=volume.index)
+    mean = volume.rolling(period, min_periods=10).mean()
+    std = volume.rolling(period, min_periods=10).std().replace(0, np.nan)
+    return ((volume - mean) / std).fillna(0.0)

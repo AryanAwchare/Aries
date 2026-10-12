@@ -11,6 +11,13 @@ from app.risk.prop_profiles import PropProfile
 from app.risk.engine import AccountState, RiskEngine
 
 
+@pytest.fixture(autouse=True)
+def isolate_test_db(monkeypatch):
+    """Ensure automated tests run against local SQLite and do not pollute live Supabase."""
+    monkeypatch.setenv("SUPABASE_DB_URL", "")
+
+
+
 @pytest.fixture
 def profile() -> PropProfile:
     return PropProfile(name="test", capital=100_000.0)

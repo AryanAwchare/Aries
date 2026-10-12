@@ -23,9 +23,8 @@ data/roster.json
 
 # SIH 2026 knowledge base (separate project — not part of Aries)
 SIH_PS101_KnowledgeBase.md
-
-# skillverify (separate project — not part of Aries)
 skillverify/
+node_modules/
 
 # Logs
 logs/

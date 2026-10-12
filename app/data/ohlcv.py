@@ -47,13 +47,21 @@ class CSVProvider(OHLCVProvider):
         self.directory = directory
 
     async def get_ohlcv(self, request: OHLCVRequest) -> pd.DataFrame:
-        import aiofiles  # noqa: F401  (optional accelerator; falls back to sync read)
+        try:
+            import aiofiles  # noqa: F401  (optional accelerator; falls back to sync read)
+        except ImportError:
+            aiofiles = None
 
         # NOTE: pyarrow-backed feather is preferable for big files; keep CSV
         # simple and readable for now.
         path = request.path or f"{self.directory}/{request.symbol}_{request.timeframe}.csv"
         df = pd.read_csv(path, parse_dates=["timestamp"])
-        df = df.set_index("timestamp").tz_localize("UTC")
+        df = df.set_index("timestamp")
+        # Handle both tz-naive (localize) and tz-aware (convert) timestamps
+        if df.index.tz is None:
+            df = df.tz_localize("UTC")
+        else:
+            df = df.tz_convert("UTC")
         mask = (df.index >= request.start) & (df.index <= request.end)
         return df.loc[mask][OHLCV_COLUMNS]
 

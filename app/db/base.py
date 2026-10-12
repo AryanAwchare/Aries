@@ -1,4 +1,4 @@
-"""Async database engine/session management (SQLAlchemy 2.0)."""
+﻿"""Async database engine/session management (SQLAlchemy 2.0)."""
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
@@ -14,7 +14,11 @@ class Base(DeclarativeBase):
 
 
 def create_sessionmaker(settings: Settings, echo: bool = False) -> async_sessionmaker[AsyncSession]:
-    engine = create_async_engine(settings.database_url, echo=echo, future=True)
+    url = settings.effective_db_url
+    engine_kwargs = {"echo": echo, "future": True}
+    if not url.startswith("sqlite"):
+        engine_kwargs["pool_pre_ping"] = True
+    engine = create_async_engine(url, **engine_kwargs)
     return async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
@@ -23,7 +27,11 @@ class Database:
 
     def __init__(self, settings: Settings, echo: bool = False) -> None:
         self.settings = settings
-        self.engine = create_async_engine(settings.database_url, echo=echo, future=True)
+        url = settings.effective_db_url
+        engine_kwargs = {"echo": echo, "future": True}
+        if not url.startswith("sqlite"):
+            engine_kwargs["pool_pre_ping"] = True
+        self.engine = create_async_engine(url, **engine_kwargs)
         self.session_factory = async_sessionmaker(self.engine, expire_on_commit=False, class_=AsyncSession)
 
     async def create_all(self) -> None:

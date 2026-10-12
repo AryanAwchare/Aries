@@ -1,4 +1,4 @@
-"""Application configuration via pydantic-settings.
+﻿"""Application configuration via pydantic-settings.
 
 All values come from environment variables / .env. A trading platform
 must be explicit about its mode — `TRADING_MODE` is validated here so a
@@ -6,6 +6,7 @@ typo can never silently become ``live``.
 """
 from __future__ import annotations
 
+import os
 from enum import Enum
 from pathlib import Path
 
@@ -24,10 +25,6 @@ class TradingMode(str, Enum):
     LIVE = "live"
 
 
-class ActiveModeMixin:
-    """Helper for anything that should never default to live."""
-
-
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -41,6 +38,7 @@ class Settings(BaseSettings):
 
     # --- Database ------------------------------------------------------
     database_url: str = "sqlite+aiosqlite:///./data/app.db"
+    supabase_db_url: str = ""
 
     # --- Market data ----------------------------------------------------
     market_symbol: str = "XAUUSD"
@@ -50,9 +48,6 @@ class Settings(BaseSettings):
     metas_api_prop_account_id: str = ""
 
     # --- Execution driver ------------------------------------------------
-    # metaapi → MetaApi cloud SDK (needs METAAPI_TOKEN)
-    # ea      → local MetaTrader terminal polls this platform over HTTP
-    # paper   → fills instantly in-process (tests / replay / dry runs)
     execution_driver: str = "paper"
     ea_api_key: str = ""
     ea_order_timeout_seconds: int = 60
@@ -67,7 +62,26 @@ class Settings(BaseSettings):
     leader_roster_path: str = "data/roster.json"
     max_live_leaders: int = 5
     max_watch_leaders: int = 50
+    live_leader_pool_size: int = 5
     leader_min_observations: int = 3
+    leader_rescore_interval_hours: int = 4
+
+    # --- Leader Eligibility & Scoring (Phase 3) ---------------------------
+    min_account_age_days: int = 180
+    min_closed_trades: int = 100
+    max_account_drawdown_ceiling: float = 25.0
+    max_inactivity_days: int = 30
+    leader_consecutive_loss_limit: int = 3
+    leader_live_drawdown_limit_pct: float = 5.0
+
+    # Configurable Stage B weights
+    weight_risk_adjusted_return: float = 0.20
+    weight_profit_factor: float = 0.20
+    weight_drawdown_quality: float = 0.15
+    weight_consistency: float = 0.15
+    weight_expectancy: float = 0.10
+    weight_longevity: float = 0.10
+    weight_recent_performance: float = 0.10
 
     # --- Kronos / forecast -------------------------------------------------
     kronos_model_path: str = ""
@@ -120,6 +134,20 @@ class Settings(BaseSettings):
         return v or "paper"
 
     # ---- computed helpers -------------------------------------------------------
+
+    @property
+    def effective_db_url(self) -> str:
+        """Prefers SUPABASE_DB_URL if configured, otherwise falls back to database_url."""
+        env_supabase = os.getenv("SUPABASE_DB_URL") or self.supabase_db_url
+        if env_supabase and env_supabase.strip():
+            url = env_supabase.strip()
+            # asyncpg adapter normalization if postgresql:// is passed
+            if url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
+                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+            return url
+        return self.database_url
 
     @property
     def leader_ids(self) -> list[str]:

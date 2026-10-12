@@ -1,4 +1,4 @@
-"""Command-line entrypoints: setup db, train, backtest, walk-forward, replay,
+﻿"""Command-line entrypoints: setup db, train, backtest, walk-forward, ablation, replay,
 leader poll. Run with ``python -m app.cli <command>``.
 
 Examples
@@ -6,7 +6,8 @@ Examples
 python -m app.cli setup-db
 python -m app.cli poll-leaders --once
 python -m app.cli backtest --synthetic
-python -m app.cli walk-forward --synthetic
+python -m app.cli ablation --synthetic
+python -m app.cli walk-forward --synthetic --calibrate
 python -m app.cli replay --synthetic
 """
 from __future__ import annotations
@@ -32,11 +33,11 @@ async def cmd_setup_db(args) -> None:
     settings.ensure_dirs()
     db = Database(settings)
     await db.create_all()
-    print(f"Database ready at {settings.database_url}")
+    print(f"Database ready at {settings.effective_db_url}")
 
 
 async def cmd_backtest(args) -> None:
-    from .backtest.runner import BacktestRunner, ProbScorer
+    from .backtest.runner import BacktestRunner, ProbScorer, TransactionCostModel
     from .execution.killswitch import KillSwitch
     from .risk.engine import RiskEngine
     from .risk.limiter import RateLimiter
@@ -46,7 +47,8 @@ async def cmd_backtest(args) -> None:
     profile = load_profile(settings.prop_profile_path)
     ohlcv = await _load_ohlcv(settings, args)
     risk = RiskEngine(profile, KillSwitch(True), RateLimiter())
-    result = BacktestRunner(risk, scorer=ProbScorer()).run(ohlcv, start_capital=profile.capital)
+    costs = TransactionCostModel()
+    result = BacktestRunner(risk, scorer=ProbScorer(), cost_model=costs).run(ohlcv, start_capital=profile.capital)
     _print_backtest(result)
 
 
@@ -57,12 +59,45 @@ def _print_backtest(result) -> None:
     print(f"max drawdown:          {result.max_drawdown_pct:.2%}")
     print(f"sharpe (approx):       {result.sharpe:.2f}")
     print(f"profit factor:         {result.profit_factor:.2f}")
+    print(f"brier score:           {result.brier_score:.4f}")
+    print(f"commission paid:       ${result.total_commission_paid:.2f}")
+    print(f"slippage cost:         ${result.total_slippage_paid:.2f}")
+    print(f"swap cost:             ${result.total_swap_paid:.2f}")
+
+
+async def cmd_ablation(args) -> None:
+    from .backtest.ablation import AblationEngine
+    from .backtest.runner import TransactionCostModel
+    from .backtest.walkforward import time_slices
+    from .execution.killswitch import KillSwitch
+    from .risk.engine import RiskEngine
+    from .risk.limiter import RateLimiter
+    from .risk.prop_profiles import load_profile
+
+    settings = get_settings()
+    profile = load_profile(settings.prop_profile_path)
+    ohlcv = await _load_ohlcv(settings, args)
+    risk = RiskEngine(profile, KillSwitch(True), RateLimiter())
+    costs = TransactionCostModel()
+    ablation = AblationEngine(risk, cost_model=costs)
+
+    slices = time_slices(
+        ohlcv,
+        train_end=settings.train_end,
+        val_end=settings.validation_end,
+        test_end=settings.test_end,
+    )
+    df_results = ablation.run_all_ablations(slices)
+    print("\n" + "=" * 92)
+    print("                      ARIES ABLATION COMPARISON REPORT                      ")
+    print("=" * 92)
+    print(df_results.to_string(index=False))
+    print("=" * 92 + "\n")
 
 
 async def cmd_walk_forward(args) -> None:
     from .backtest.leakage import run_leakage_report
     from .backtest.walkforward import walk_forward, write_fold_report
-    from .data.ohlcv import SyntheticProvider  # noqa: F401
 
     settings = get_settings()
     ohlcv = await _load_ohlcv(settings, args)
@@ -82,7 +117,13 @@ async def cmd_walk_forward(args) -> None:
     )
     write_fold_report(folds, BASE_DIR / "data" / "wf_report.json")
     for fold in folds:
-        print(f"{fold.fold_name}: winner={fold.winner} logloss={fold.test_logloss:.4f} auc={fold.test_auc:.3f}")
+        print(f"\n{fold.fold_name}: winner={fold.winner} logloss={fold.test_logloss:.4f} "
+              f"auc={fold.test_auc:.3f} Brier={fold.brier_score:.4f} ECE={fold.ece:.4f}")
+        if args.calibrate and fold.calibration.reliability_curve:
+            print("\n--- Reliability Curve (Calibration Table) ---")
+            print(f"{'Bin':<5} {'Pred Prob':<12} {'True WinRate':<14} {'Sample Count':<12}")
+            for b in fold.calibration.reliability_curve:
+                print(f"{b.bin_index:<5} {b.mean_predicted_prob:<12.3f} {b.true_fraction:<14.3f} {b.count:<12}")
 
 
 async def cmd_replay(args) -> None:
@@ -128,12 +169,6 @@ async def cmd_poll_once(args) -> None:
 
 
 async def cmd_scan_leaders(args) -> None:
-    """Discover + rank leaders from the Myfxbook watch list; rotate to live.
-
-    Myfxbook has no discovery API — you add candidate accounts on myfxbook.com
-    (Top Systems / Follow) once, then this ranks the whole pool with one bulk
-    call and promotes the top ``max_live`` performers to the live tier.
-    """
     from .config import get_settings
     from .db.base import Database
     from .leaders.discovery import LeaderRoster
@@ -143,7 +178,7 @@ async def cmd_scan_leaders(args) -> None:
     settings = get_settings()
     roster = LeaderRoster(
         settings.roster_path,
-        max_live=settings.max_live_leaders,
+        max_live=settings.live_leader_pool_size,
         max_watch=settings.max_watch_leaders,
         min_observations=settings.leader_min_observations,
     )
@@ -187,8 +222,6 @@ async def cmd_scan_leaders(args) -> None:
 
 
 def _print_roster(settings, roster) -> None:
-    from .leaders.discovery import rank_watch_stats
-
     rows = sorted(roster.all_ids(), key=lambda i: (roster.get(i).watch_score, roster.get(i).observations), reverse=True)
     print("-" * 78)
     print(f"{'tier':<6} {'id':<16} {'score':>6} {'obs':>4}  name")
@@ -196,13 +229,12 @@ def _print_roster(settings, roster) -> None:
     for leader_id in rows:
         c = roster.get(leader_id)
         print(f"{c.tier:<6} {leader_id:<16} {c.watch_score:>6.3f} {c.observations:>4}  {c.name or ''}")
-    print(f"live={len(roster.live_ids())}/{settings.max_live_leaders}  "
+    print(f"live={len(roster.live_ids())}/{settings.live_leader_pool_size}  "
           f"watch={len(roster.watch_ids())}/{settings.max_watch_leaders}  file={settings.roster_path}")
 
 
 async def _load_ohlcv(settings, args):
     from datetime import datetime, timezone
-
     from .data.ohlcv import CSVProvider, OHLCVRequest, SyntheticProvider
 
     end = datetime.now(timezone.utc)
@@ -223,7 +255,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="gold-trader")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sp = sub.add_parser("setup-db", help="create the database schema")
+    sub.add_parser("setup-db", help="create the database schema")
 
     sp = sub.add_parser("poll-leaders", help="poll Myfxbook live-tier leaders once")
     sp.add_argument("--once", action="store_true")
@@ -244,8 +276,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--days", type=int, default=730, help="lookback window in days")
     sp.add_argument("--seed", type=int, default=42)
 
+    sp = sub.add_parser("ablation", help="run 6-way ablation comparison across splits")
+    sp.add_argument("--synthetic", action="store_true", help="use synthetic data")
+    sp.add_argument("--days", type=int, default=1800, help="lookback window in days")
+    sp.add_argument("--seed", type=int, default=42)
+
     sp = sub.add_parser("walk-forward", help="walk-forward train/validate/test")
     sp.add_argument("--synthetic", action="store_true")
+    sp.add_argument("--calibrate", action="store_true", help="output Brier score & reliability curve")
     sp.add_argument("--days", type=int, default=800)
     sp.add_argument("--seed", type=int, default=42)
 
@@ -267,6 +305,8 @@ def main() -> None:
         asyncio.run(cmd_scan_leaders(args))
     elif args.command == "backtest":
         asyncio.run(cmd_backtest(args))
+    elif args.command == "ablation":
+        asyncio.run(cmd_ablation(args))
     elif args.command == "walk-forward":
         asyncio.run(cmd_walk_forward(args))
     elif args.command == "replay":
