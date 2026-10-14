@@ -28,9 +28,9 @@ async def list_signals(limit: int = 50, session: AsyncSession = Depends(_session
         {
             "id": s.id,
             "symbol": s.symbol,
-            "side": s.side.value,
+            "side": s.side.value if s.side else None,
             "verb": s.verb,
-            "status": s.status.value,
+            "status": s.status.value if s.status else None,
             "p": s.meta_model_probability,
             "leader_score": s.leader_score,
             "threshold": s.threshold,
@@ -55,9 +55,10 @@ async def re_evaluate(signal_id: str, request: Request, session: AsyncSession = 
     if event is None:
         raise HTTPException(404, "source trade not found")
 
+    side = decision.side.value if decision.side else None
     feature = {**decision.features_json}
-    feature["side_buy"] = 1 if decision.side.value == "buy" else 0
-    feature["side_sell"] = 1 if decision.side.value == "sell" else 0
+    feature["side_buy"] = 1 if side == "buy" else 0
+    feature["side_sell"] = 1 if side == "sell" else 0
 
     from ... import services
     from ...metamodel.predict import MetaModelPredictor
