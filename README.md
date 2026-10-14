@@ -40,7 +40,7 @@ app/
   services.py          kill switch, copy-trading toggle, db singletons
   db/                  async SQLAlchemy 2.0 models + audit trail
   data/                OHLCV providers (CSV/MetaApi/synthetic) + CFTC COT
-  features/            indicators + point-in-time feature vectors
+  features/            indicators + point-in-time feature vectors + TimeframeProfile
   leaders/             Myfxbook client, daily scoring, persistence
   forecast/            Kronos wrapper (forecast % + confidence)
   metamodel/           XGBoost vs logistic baseline, calibration, prediction
@@ -51,10 +51,10 @@ app/
   scheduler/           APScheduler jobs (leader poll, daily scoring, weekly COT)
   backtest/            runner, walk-forward, replay, leakage checks
   pipelines/           live signal pipeline (leader event → decision → order)
-  api/                 FastAPI routes (health, leaders, signals, risk, modes)
-  cli.py               train / backtest / walk-forward / replay / poll
+  api/                 FastAPI routes (health, leaders, signals, risk, modes, ops)
+  cli.py               train / backtest / walk-forward / replay / poll (multi-timeframe)
 scripts/setup.ps1      one-shot Windows setup (venv + deps + db)
-tests/                 risk, features/strategy, metamodel, backtest
+tests/                 risk, features/strategy, metamodel, backtest, ops
 ```
 
 ## Setup
@@ -81,12 +81,20 @@ Copy-Item .env.example .env      # then fill in credentials
 .\.venv\Scripts\python.exe -m app.cli walk-forward --synthetic
 .\.venv\Scripts\python.exe -m app.cli replay --synthetic
 
+# Real M15 data (after ingesting HISTDATA M15):
+.\.venv\Scripts\python.exe -m app.cli backtest --days 800
+.\.venv\Scripts\python.exe -m app.cli walk-forward --days 800 --calibrate
+
+# Real M1 data (scalping) — separate model dir, non-destructive:
+.\.venv\Scripts\python.exe -m app.cli backtest --timeframe M1 --days 3000
+.\.venv\Scripts\python.exe -m app.cli walk-forward --timeframe M1 --days 3000 --calibrate
+
 # Tests
 .\.venv\Scripts\python.exe -m pytest tests -q
 
 # API + dashboard endpoints
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
-#  http://127.0.0.1:8000/health , /api/risk/status , /api/signals ...
+#  http://127.0.0.1:8000/health , /api/risk/status , /api/signals , /api/ops/backtest ...
 ```
 
 ## Modes

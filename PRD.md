@@ -59,7 +59,8 @@ Aries enforces an explicit operating mode state machine (`TRADING_MODE`):
 ## 4. Detailed Feature Specifications
 
 ### 4.1 Data Ingestion & Engineering Engine
-- **Asset Scope:** Primary focus on `XAUUSD` (Spot Gold / USD) at `M15` (15-minute) resolution, expandable to EURUSD and major indices.
+- **Asset Scope:** Primary focus on `XAUUSD` (Spot Gold / USD) at **M15** (15-minute) resolution, with **M1** (1-minute) scalping mode as a first-class configuration, expandable to EURUSD and major indices.
+- **Multi-Timeframe Profiles:** `app/features/timeframe.py` defines `TimeframeProfile` for M1, M5, M15, M30, H1 — each specifying horizon bars, label threshold, min-move %, ATR stop points, lookback hours, and Kronos horizon. Feature windows (RSI 14, MACD 12/26/9, ATR 14, etc.) are deliberately **bar-based and identical across timeframes** to isolate the timeframe variable; only the profile knobs change.
 - **CFTC Commitments of Traders (COT):** Ingest weekly non-commercial net positioning reports to establish macro trend bias.
 - **Point-in-Time Integrity:** Strict prohibition of future data leakage. Feature calculation on bar $t$ only uses data up to timestamp $t$ (enforced by `app/backtest/leakage.py`).
 - **Feature Set:**
@@ -88,6 +89,12 @@ Aries enforces an explicit operating mode state machine (`TRADING_MODE`):
   $$P(\text{Profitable} \mid \text{Market Features}, \text{Leader Event})$$
 - **Calibration Layer:** Isotonic Regression / Platt Scaling applied to map model logits into reliable empirical probabilities.
 - **Decision Gate:** An order is validated only if calibrated $P \ge \tau$ (default $\tau = 0.60$).
+
+### 4.3.1 M1 Scalping Mode (Experimental)
+- **M1 Profile:** horizon=15 bars (15 min), label_threshold=0.0003 (~$0.81), min_move_pct=0.02 (~292k events), stop_points=2.0, lookback_hours=24, kronos_horizon=24.
+- **Walk-Forward Result (M1, 2022–2026, ~292k rows):** winner=xgboost, Test LL=0.6541, **AUC=0.543**, Brier=0.2307, ECE=0.0124. Calibration is excellent (ECE < 0.02) but discrimination remains below the 0.65 target.
+- **Cost-Inclusive Backtest (M1, 5y):** 12 trades, 8.3% win, -3.83% return, PF=0.31, max DD 4.26%. Commission $395, slippage $1,131 — round-trip cost dominates at 1-min resolution.
+- **Status:** M1 model trained to `data/models/wf_main_m1` (non-destructive, separate from M15 `wf_main`). Not promoted to live; M15 remains the production timeframe until AUC ≥ 0.65 is achieved.
 
 ### 4.4 Risk Governor & Circuit Breakers
 - **Multi-Level Drawdown Defense:**

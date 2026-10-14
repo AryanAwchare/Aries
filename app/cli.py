@@ -39,16 +39,21 @@ async def cmd_setup_db(args) -> None:
 async def cmd_backtest(args) -> None:
     from .backtest.runner import BacktestRunner, ProbScorer, TransactionCostModel
     from .execution.killswitch import KillSwitch
+    from .features.timeframe import get_profile
     from .risk.engine import RiskEngine
     from .risk.limiter import RateLimiter
     from .risk.prop_profiles import load_profile
 
     settings = get_settings()
     profile = load_profile(settings.prop_profile_path)
-    ohlcv = await _load_ohlcv(settings, args)
+    timeframe = (getattr(args, "timeframe", None) or settings.market_timeframe).upper()
+    tfp = get_profile(timeframe)
+    ohlcv = await _load_ohlcv(settings, args, timeframe=timeframe)
     risk = RiskEngine(profile, KillSwitch(True), RateLimiter())
     costs = TransactionCostModel()
-    result = BacktestRunner(risk, scorer=ProbScorer(), cost_model=costs).run(ohlcv, start_capital=profile.capital)
+    result = BacktestRunner(
+        risk, scorer=ProbScorer(), cost_model=costs, stop_points=tfp.stop_points
+    ).run(ohlcv, start_capital=profile.capital)
     _print_backtest(result)
 
 
@@ -98,9 +103,12 @@ async def cmd_ablation(args) -> None:
 async def cmd_walk_forward(args) -> None:
     from .backtest.leakage import run_leakage_report
     from .backtest.walkforward import walk_forward, write_fold_report
+    from .features.timeframe import get_profile
 
     settings = get_settings()
-    ohlcv = await _load_ohlcv(settings, args)
+    timeframe = (getattr(args, "timeframe", None) or settings.market_timeframe).upper()
+    tfp = get_profile(timeframe)
+    ohlcv = await _load_ohlcv(settings, args, timeframe=timeframe)
 
     leakage = run_leakage_report(ohlcv, settings.test_start)
     print(f"leakage report: causal={leakage.features_causal} kronos_overlap={leakage.kronos_test_overlap}")
@@ -108,14 +116,22 @@ async def cmd_walk_forward(args) -> None:
         print("  -", note)
 
     out_dir = BASE_DIR / "data" / "models"
+    fold_name = "wf_main" if timeframe == "M15" else f"wf_main_{timeframe.lower()}"
+    print(f"timeframe={timeframe} horizon_bars={tfp.horizon_bars} "
+          f"label_threshold={tfp.label_threshold} min_move_pct={tfp.min_move_pct} -> {fold_name}")
     folds = walk_forward(
         ohlcv,
         train_end=settings.train_end,
         val_end=settings.validation_end,
         test_end=settings.test_end,
+        horizon_bars=tfp.horizon_bars,
+        min_move_pct=tfp.min_move_pct,
+        threshold=tfp.label_threshold,
+        fold_name=fold_name,
         out_dir=out_dir,
     )
-    write_fold_report(folds, BASE_DIR / "data" / "wf_report.json")
+    report_name = "wf_report.json" if timeframe == "M15" else f"wf_report_{timeframe.lower()}.json"
+    write_fold_report(folds, BASE_DIR / "data" / report_name)
     for fold in folds:
         print(f"\n{fold.fold_name}: winner={fold.winner} logloss={fold.test_logloss:.4f} "
               f"auc={fold.test_auc:.3f} Brier={fold.brier_score:.4f} ECE={fold.ece:.4f}")
@@ -233,21 +249,23 @@ def _print_roster(settings, roster) -> None:
           f"watch={len(roster.watch_ids())}/{settings.max_watch_leaders}  file={settings.roster_path}")
 
 
-async def _load_ohlcv(settings, args):
+async def _load_ohlcv(settings, args, timeframe: str | None = None):
     from datetime import datetime, timezone
     from .data.ohlcv import CSVProvider, OHLCVRequest, SyntheticProvider
 
     end = datetime.now(timezone.utc)
     start = end - timedelta(days=args.days)
+    tf = (timeframe or settings.market_timeframe).upper()
     if args.synthetic:
         provider = SyntheticProvider(seed=args.seed)
     else:
         provider = CSVProvider(str(BASE_DIR / "data" / "raw"))
     df = await provider.get_ohlcv(
-        OHLCVRequest(symbol=settings.market_symbol, timeframe=settings.market_timeframe, start=start, end=end)
+        OHLCVRequest(symbol=settings.market_symbol, timeframe=tf, start=start, end=end)
     )
     df.attrs["symbol"] = settings.market_symbol
-    print(f"loaded {len(df)} bars  {df.index[0]} .. {df.index[-1]}")
+    df.attrs["timeframe"] = tf
+    print(f"loaded {len(df)} bars ({tf})  {df.index[0]} .. {df.index[-1]}")
     return df
 
 
@@ -275,22 +293,26 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--synthetic", action="store_true", help="use deterministic synthetic data")
     sp.add_argument("--days", type=int, default=730, help="lookback window in days")
     sp.add_argument("--seed", type=int, default=42)
+    sp.add_argument("--timeframe", default=None, help="override market timeframe (M1, M5, M15, ...)")
 
     sp = sub.add_parser("ablation", help="run 6-way ablation comparison across splits")
     sp.add_argument("--synthetic", action="store_true", help="use synthetic data")
     sp.add_argument("--days", type=int, default=1800, help="lookback window in days")
     sp.add_argument("--seed", type=int, default=42)
+    sp.add_argument("--timeframe", default=None, help="override market timeframe (M1, M5, M15, ...)")
 
     sp = sub.add_parser("walk-forward", help="walk-forward train/validate/test")
     sp.add_argument("--synthetic", action="store_true")
     sp.add_argument("--calibrate", action="store_true", help="output Brier score & reliability curve")
     sp.add_argument("--days", type=int, default=800)
     sp.add_argument("--seed", type=int, default=42)
+    sp.add_argument("--timeframe", default=None, help="override market timeframe (M1, M5, M15, ...)")
 
     sp = sub.add_parser("replay", help="replay historical bars through the live stack")
     sp.add_argument("--synthetic", action="store_true")
     sp.add_argument("--days", type=int, default=180)
     sp.add_argument("--seed", type=int, default=42)
+    sp.add_argument("--timeframe", default=None, help="override market timeframe (M1, M5, M15, ...)")
     return parser
 
 

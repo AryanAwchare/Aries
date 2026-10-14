@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...config import BASE_DIR
 from ...db.base import Database
 from ...db.models import SignalDecision, SignalStatus, TradeEvent
 from ...features.build_features import build_feature_row
@@ -63,7 +64,7 @@ async def re_evaluate(signal_id: str, request: Request, session: AsyncSession = 
     from ...risk.prop_profiles import load_profile
 
     settings = request.app.state.settings
-    profile = load_profile(settings.BASE_DIR / "app" / "risk" / "prop_profiles" / f"{settings.active_prop_profile}.yaml")
+    profile = load_profile(BASE_DIR / "app" / "risk" / "prop_profiles" / f"{settings.active_prop_profile}.yaml")
     predictor = MetaModelPredictor(view_model_dir(settings), settings.meta_model_prob_threshold)
 
     from ...strategy.engine import StrategyEngine
@@ -74,4 +75,4 @@ async def re_evaluate(signal_id: str, request: Request, session: AsyncSession = 
 
 
 def view_model_dir(settings):
-    return settings.BASE_DIR / "data" / "models"
+    return BASE_DIR / "data" / "models"

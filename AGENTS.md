@@ -46,11 +46,12 @@ Aries models an institutional quantitative trading firm where distinct autonomou
 - **Job Title:** Quantitative ML Research & Inference Specialist
 - **Mission:** Extract statistical directional edge from stationary technical features and time-series foundation forecasts.
 - **Inputs:**
-  - Standardized feature vector $X_t \in \mathbb{R}^{d}$ derived from M15 OHLCV bar close.
+  - Standardized feature vector $X_t \in \mathbb{R}^{d}$ derived from OHLCV bar close (timeframe-configurable: M1, M5, M15, M30, H1; defaults to M15).
   - Multi-step horizon forecast from Kronos foundation model.
 - **Output:**
   - Directional probability $P(\text{Up}) \in [0.0, 1.0]$.
   - Calibrated confidence metric and feature attribution vector.
+- **Timeframe Profiles:** `app/features/timeframe.py` provides `TimeframeProfile` per timeframe — horizon bars, label threshold, min-move %, ATR stop, lookback hours, Kronos horizon. Feature windows (RSI 14, MACD 12/26/9, ATR 14, etc.) are **bar-based and identical across timeframes** to isolate the timeframe variable.
 - **Failure Mode / Fallback:**
   - If Kronos model inference times out ($> 500\text{ms}$), fall back to stationary exponential moving average momentum slope.
   - If XGBoost confidence is within ambiguous zone $[0.45, 0.55]$, emit `DIRECTION_NEUTRAL` with zero confidence.
@@ -114,6 +115,7 @@ Agents exchange messages over an asynchronous event bus using standardized JSON 
   }
 }
 ```
+**Note:** `timeframe` is configurable per profile (M1, M5, M15, M30, H1). M15 is production; M1 model exists at `wf_main_m1` but is not promoted (AUC 0.543 < 0.65 target).
 
 ### 3.2 Order Intent Schema (`event.order_intent`)
 ```json

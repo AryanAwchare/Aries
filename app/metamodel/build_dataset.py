@@ -48,11 +48,12 @@ def build_training_data(
     cot: dict[str, float] | None = None,
     horizon_bars: int = 16,
     min_move_pct: float = 0.05,
+    threshold: float = 0.0005,
 ) -> pd.DataFrame:
     """Feature rows + ``label`` for every candidate event.
 
     Returns columns: MODEL_FEATURES + ``label`` (1 if the side was profitable
-    over ``horizon_bars``).
+    over ``horizon_bars`` by at least ``threshold``).
     """
     df = calculate_indicator_block(ohlcv)
     events = candidate_events(df, min_move_pct)
@@ -63,8 +64,8 @@ def build_training_data(
     if valid_idx.empty:
         return pd.DataFrame(columns=MODEL_FEATURES + ["label"])
 
-    buy_labels = label_trades(df, horizon_bars, side="buy")
-    sell_labels = label_trades(df, horizon_bars, side="sell")
+    buy_labels = label_trades(df, horizon_bars, side="buy", threshold=threshold)
+    sell_labels = label_trades(df, horizon_bars, side="sell", threshold=threshold)
 
     ev_subset = events.loc[valid_idx]
     is_buy = ev_subset["side"].values == "buy"

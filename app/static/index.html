@@ -4,13 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aries Institutional Trading Terminal · Gold (XAU/USD)</title>
-  
-  <!-- Fonts -->
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- Tailwind CSS CDN -->
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -38,10 +36,8 @@
       }
     }
   </script>
-  
-  <!-- TradingView Lightweight Charts -->
+
   <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
-  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
@@ -56,41 +52,27 @@
       font-variant-numeric: tabular-nums lining-nums;
       font-feature-settings: "tnum" 1, "zero" 1;
     }
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #070A13;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #1E293B;
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #334155;
-    }
-    .flash-green {
-      animation: flash-green-anim 0.6s ease-out;
-    }
-    .flash-red {
-      animation: flash-red-anim 0.6s ease-out;
-    }
-    @keyframes flash-green-anim {
-      0% { background-color: rgba(16, 185, 129, 0.35); }
-      100% { background-color: transparent; }
-    }
-    @keyframes flash-red-anim {
-      0% { background-color: rgba(244, 63, 94, 0.35); }
-      100% { background-color: transparent; }
-    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #070A13; }
+    ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    .flash-green { animation: flash-green-anim 0.6s ease-out; }
+    .flash-red { animation: flash-red-anim 0.6s ease-out; }
+    @keyframes flash-green-anim { 0% { background-color: rgba(16,185,129,0.35); } 100% { background-color: transparent; } }
+    @keyframes flash-red-anim { 0% { background-color: rgba(244,63,94,0.35); } 100% { background-color: transparent; } }
+    .navtab { border-bottom: 2px solid transparent; }
+    .navtab.active { border-bottom-color: #06B6D4; color: #fff; }
+    input, select, textarea { color-scheme: dark; }
+    .field { background:#0B0F19; border:1px solid #1E293B; border-radius:6px; padding:6px 9px; font-size:12px; color:#E2E8F0; width:100%; }
+    .field:focus { outline:none; border-color:#06B6D4; }
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:600; border:1px solid transparent; transition:.15s; }
+    .btn:active { transform: scale(.97); }
   </style>
 </head>
 <body class="min-h-screen flex flex-col bg-canvas text-slate-100 antialiased selection:bg-cyan-500/20">
 
   <!-- TOP APP BAR -->
   <header class="h-14 border-b border-borderSubtle bg-subtle/80 backdrop-blur sticky top-0 z-40 px-4 flex items-center justify-between">
-    <!-- Left Cluster -->
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2">
         <div class="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-accentAi">
@@ -101,958 +83,1282 @@
 
       <div class="h-4 w-px bg-borderSubtle"></div>
 
-      <!-- Mode Badge -->
       <span id="badgeTradingMode" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 num uppercase">
-        PAPER · EA
+        PAPER · PAPER
       </span>
 
-      <!-- Symbol Selector -->
       <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface border border-borderSubtle text-xs font-semibold text-slate-200">
         <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-        <span>XAUUSD</span>
+        <span id="headerSymbolLabel">XAUUSD</span>
         <span class="text-slate-500 text-[10px] num" id="headerTfLabel">M15</span>
       </div>
 
-      <!-- MT5 Terminal Status -->
       <div id="mt5StatusPill" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface border border-borderSubtle text-[11px] text-slate-400">
-        <span id="mt5StatusDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="mt5AccountLabel">MT5: Connecting...</span>
+        <span id="mt5StatusDot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+        <span id="mt5AccountLabel">MT5: …</span>
       </div>
     </div>
 
-    <!-- Center Cluster: Drawdown Bar -->
     <div class="hidden md:flex items-center gap-3 bg-surface/70 px-3 py-1 rounded-md border border-borderSubtle text-xs">
-      <span class="text-slate-400 font-medium">Daily Drawdown</span>
-      <div class="w-32 bg-slate-800 h-2 rounded-full overflow-hidden relative">
+      <span class="text-slate-400 font-medium">Drawdown</span>
+      <div class="w-28 bg-slate-800 h-2 rounded-full overflow-hidden">
         <div id="dailyDdBar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
       </div>
       <span id="dailyDdText" class="num font-semibold text-slate-200">0.00% / 5.0%</span>
     </div>
 
-    <!-- Right Cluster: Kill Switch & Controls -->
     <div class="flex items-center gap-2.5">
-      <!-- Run AI Scan Button -->
-      <button onclick="runManualScan()" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20 transition active:scale-95">
-        <i data-lucide="scan" class="w-3.5 h-3.5"></i>
-        <span>Scan Market</span>
+      <button onclick="openOrderModal()" class="hidden sm:flex btn bg-cyan-500/10 text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/20">
+        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i><span>New Order</span>
       </button>
 
-      <!-- Heartbeat & Clock -->
       <div class="hidden lg:flex flex-col items-end text-right pr-2">
         <span id="utcClock" class="num text-xs font-medium text-slate-300">--:--:-- UTC</span>
-        <span class="text-[10px] text-emerald-400 flex items-center gap-1">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-          System Live
+        <span class="text-[10px] text-slate-400 flex items-center gap-1">
+          <span id="healthDot" class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+          <span id="healthLabel">checking…</span>
         </span>
       </div>
 
-      <!-- Master Kill Switch Toggle -->
-      <button id="btnKillSwitch" onclick="toggleKillSwitch()" class="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition-all shadow-sm active:scale-95 border bg-rose-500/10 text-rose-400 border-rose-500/40 hover:bg-rose-500/20">
-        <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
-        <span id="killSwitchBtnText">KILL SWITCH: ARMED</span>
+      <!-- Truthful kill-switch control: enabled=TRUE => trading allowed -->
+      <button id="btnKillSwitch" onclick="toggleKillSwitch()" class="btn border" title="enabled = trading allowed; disabled = kill switch engaged">
+        <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+        <span id="killSwitchBtnText">…</span>
       </button>
 
-      <!-- API link -->
       <a href="/docs" target="_blank" title="Open API Documentation" class="p-1.5 rounded bg-surface border border-borderSubtle text-slate-400 hover:text-white transition">
         <i data-lucide="file-code-2" class="w-4 h-4"></i>
       </a>
     </div>
   </header>
 
-  <!-- MAIN VIEWPORT -->
+  <!-- SECTION NAV -->
+  <nav class="border-b border-borderSubtle bg-canvas px-4 flex items-center gap-1 text-xs font-semibold overflow-x-auto">
+    <button onclick="showSection('desk')" data-nav="desk" class="navtab active px-3 py-2.5 text-slate-300 hover:text-white flex items-center gap-1.5"><i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>Desk</button>
+    <button onclick="showSection('research')" data-nav="research" class="navtab px-3 py-2.5 text-slate-400 hover:text-white flex items-center gap-1.5"><i data-lucide="flask-conical" class="w-3.5 h-3.5"></i>Research</button>
+    <button onclick="showSection('leaders')" data-nav="leaders" class="navtab px-3 py-2.5 text-slate-400 hover:text-white flex items-center gap-1.5"><i data-lucide="users" class="w-3.5 h-3.5"></i>Leaders</button>
+    <button onclick="showSection('logs')" data-nav="logs" class="navtab px-3 py-2.5 text-slate-400 hover:text-white flex items-center gap-1.5"><i data-lucide="scroll-text" class="w-3.5 h-3.5"></i>Logs</button>
+    <button onclick="showSection('config')" data-nav="config" class="navtab px-3 py-2.5 text-slate-400 hover:text-white flex items-center gap-1.5"><i data-lucide="settings-2" class="w-3.5 h-3.5"></i>Config</button>
+    <button onclick="showSection('model')" data-nav="model" class="navtab px-3 py-2.5 text-slate-400 hover:text-white flex items-center gap-1.5"><i data-lucide="brain-circuit" class="w-3.5 h-3.5"></i>Model</button>
+  </nav>
+
   <main class="flex-1 p-3 md:p-4 space-y-3 max-w-[1920px] w-full mx-auto">
 
-    <!-- TOP ALERT BANNER (If Kill switch armed or MT5 disconnected) -->
-    <div id="systemAlertBanner" class="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-center justify-between text-xs transition">
-      <div class="flex items-center gap-2.5">
-        <i data-lucide="info" class="w-4 h-4 text-amber-400 flex-shrink-0"></i>
-        <div class="space-y-0.5">
-          <span id="alertBannerTitle" class="font-semibold text-amber-200">Kill Switch is Currently ARMED (Trading Orders Paused)</span>
-          <p id="alertBannerSub" class="text-slate-300 text-[11px]">The strategy engine and MT5 EA bridge are monitoring the market in real time. Order dispatch is safely locked until Kill Switch is disarmed.</p>
-        </div>
-      </div>
-      <button onclick="toggleKillSwitch()" id="alertBannerAction" class="px-2.5 py-1 rounded bg-amber-500 text-slate-950 font-bold text-[11px] hover:bg-amber-400 transition ml-3 flex-shrink-0">
-        Disarm & Allow Trading
-      </button>
-    </div>
+    <!-- ============================ DESK ============================ -->
+    <div id="view-desk" class="space-y-3">
 
-    <!-- HERO KPI BENTO GRID -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
-      <!-- Balance -->
-      <div class="bg-surface p-3 rounded-lg border border-borderSubtle shadow-sm flex flex-col justify-between">
-        <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Account Balance</span>
-        <div class="mt-1">
-          <span id="kpiBalance" class="num text-xl font-bold text-white">$99,870.38</span>
-          <span class="block text-[10px] text-slate-500" id="kpiBrokerServer">MetaQuotes-Demo</span>
-        </div>
-      </div>
-
-      <!-- Real-time Equity -->
-      <div class="bg-surface p-3 rounded-lg border border-borderSubtle shadow-sm flex flex-col justify-between" id="cardEquity">
-        <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Live Equity</span>
-        <div class="mt-1">
-          <span id="kpiEquity" class="num text-xl font-bold text-white">$99,870.38</span>
-          <span id="kpiEquityPct" class="block text-[10px] num text-slate-400">0.00% vs Balance</span>
-        </div>
-      </div>
-
-      <!-- Floating P&L -->
-      <div class="bg-surface p-3 rounded-lg border border-borderSubtle shadow-sm flex flex-col justify-between" id="cardPnl">
-        <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Open Floating P&L</span>
-        <div class="mt-1">
-          <span id="kpiFloatingPnl" class="num text-xl font-bold text-slate-300">$0.00</span>
-          <span id="kpiOpenPositionsCount" class="block text-[10px] text-slate-400">0 Active Positions</span>
-        </div>
-      </div>
-
-      <!-- Free Margin -->
-      <div class="bg-surface p-3 rounded-lg border border-borderSubtle shadow-sm flex flex-col justify-between">
-        <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Free Margin</span>
-        <div class="mt-1">
-          <span id="kpiFreeMargin" class="num text-xl font-bold text-white">$99,870.38</span>
-          <span id="kpiMarginLevel" class="block text-[10px] text-emerald-400 num">Desk 100% Flat</span>
-        </div>
-      </div>
-
-      <!-- Market Regime -->
-      <div class="bg-surface p-3 rounded-lg border border-borderSubtle shadow-sm flex flex-col justify-between">
-        <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Gold Market Regime</span>
-        <div class="mt-1">
-          <span id="kpiRegime" class="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-            RANGING_LOW_VOL
-          </span>
-          <span id="kpiMacroNote" class="block text-[10px] text-slate-400 mt-1 truncate">Macro Neutral</span>
-        </div>
-      </div>
-
-      <!-- AI Meta-Model Win Prob -->
-      <div class="bg-surface p-3 rounded-lg border border-borderSubtle shadow-sm flex flex-col justify-between">
-        <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">XGBoost ML Edge</span>
-        <div class="mt-1">
-          <div class="flex items-baseline justify-between">
-            <span id="kpiAiProb" class="num text-xl font-bold text-accentAi">64.0%</span>
-            <span class="text-[10px] text-emerald-400 font-semibold uppercase" id="kpiAiEdgeLabel">BUY Edge</span>
-          </div>
-          <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
-            <div id="aiProbBar" class="bg-accentAi h-full w-[64%]"></div>
+      <!-- KPI BENTO -->
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        <div class="bg-surface p-3 rounded-lg border border-borderSubtle flex flex-col justify-between">
+          <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Account Balance</span>
+          <div class="mt-1">
+            <span id="kpiBalance" class="num text-xl font-bold text-white">$--</span>
+            <span class="block text-[10px] text-slate-500" id="kpiBrokerServer">—</span>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- MAIN TWO-COLUMN WORKSPACE: CHART (LEFT 70%) + AI / RISK DESK (RIGHT 30%) -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
-      
-      <!-- LEFT: TRADINGVIEW INTERACTIVE CANDLESTICK CHART (8 Cols) -->
-      <div class="lg:col-span-8 bg-surface rounded-lg border border-borderSubtle flex flex-col overflow-hidden shadow-sm">
-        <!-- Chart Controls Header -->
-        <div class="p-2.5 border-b border-borderSubtle flex flex-wrap items-center justify-between gap-2 bg-subtle/50">
-          <div class="flex items-center gap-2">
-            <!-- Symbol Pill -->
-            <span class="text-sm font-bold text-white flex items-center gap-1.5">
-              <span>XAU/USD</span>
-              <span class="text-xs font-normal text-slate-400">· Spot Gold</span>
-            </span>
-
-            <div class="h-4 w-px bg-borderSubtle mx-1"></div>
-
-            <!-- Timeframe Selector -->
-            <div class="flex items-center gap-1 bg-surface p-0.5 rounded border border-borderSubtle text-xs">
-              <button onclick="switchTimeframe('M1')" id="tf-M1" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-400 transition">1m</button>
-              <button onclick="switchTimeframe('M5')" id="tf-M5" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-400 transition">5m</button>
-              <button onclick="switchTimeframe('M15')" id="tf-M15" class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-bold transition">15m</button>
-              <button onclick="switchTimeframe('H1')" id="tf-H1" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-400 transition">1h</button>
-              <button onclick="switchTimeframe('D1')" id="tf-D1" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-400 transition">1d</button>
+        <div class="bg-surface p-3 rounded-lg border border-borderSubtle flex flex-col justify-between">
+          <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Live Equity</span>
+          <div class="mt-1">
+            <span id="kpiEquity" class="num text-xl font-bold text-white">$--</span>
+            <span id="kpiEquityPct" class="block text-[10px] num text-slate-400">—</span>
+          </div>
+        </div>
+        <div class="bg-surface p-3 rounded-lg border border-borderSubtle flex flex-col justify-between">
+          <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Floating P&amp;L</span>
+          <div class="mt-1">
+            <span id="kpiFloatingPnl" class="num text-xl font-bold text-slate-300">$--</span>
+            <span id="kpiOpenPositionsCount" class="block text-[10px] text-slate-400">0 Positions</span>
+          </div>
+        </div>
+        <div class="bg-surface p-3 rounded-lg border border-borderSubtle flex flex-col justify-between">
+          <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Free Margin</span>
+          <div class="mt-1">
+            <span id="kpiFreeMargin" class="num text-xl font-bold text-white">$--</span>
+            <span id="kpiMarginLevel" class="block text-[10px] text-emerald-400 num">—</span>
+          </div>
+        </div>
+        <div class="bg-surface p-3 rounded-lg border border-borderSubtle flex flex-col justify-between">
+          <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Market Regime</span>
+          <div class="mt-1">
+            <span id="kpiRegime" class="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">—</span>
+            <span id="kpiMacroNote" class="block text-[10px] text-slate-400 mt-1 truncate">—</span>
+          </div>
+        </div>
+        <div class="bg-surface p-3 rounded-lg border border-borderSubtle flex flex-col justify-between">
+          <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">XGBoost ML Edge</span>
+          <div class="mt-1">
+            <div class="flex items-baseline justify-between">
+              <span id="kpiAiProb" class="num text-xl font-bold text-accentAi">--%</span>
+              <span class="text-[10px] text-slate-400 font-semibold uppercase" id="kpiAiEdgeLabel">—</span>
+            </div>
+            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
+              <div id="aiProbBar" class="bg-accentAi h-full w-0"></div>
             </div>
           </div>
-
-          <!-- Live Crosshair OHLC Legend -->
-          <div id="chartLegend" class="flex items-center gap-3 text-[11px] num text-slate-400 overflow-hidden">
-            <span>O: <span id="legO" class="text-slate-200">--</span></span>
-            <span>H: <span id="legH" class="text-slate-200">--</span></span>
-            <span>L: <span id="legL" class="text-slate-200">--</span></span>
-            <span>C: <span id="legC" class="text-slate-200">--</span></span>
-            <span>Vol: <span id="legV" class="text-slate-400">--</span></span>
-          </div>
-
-          <!-- Trade Entry Marker Info -->
-          <div id="activeTradeChartBadge" class="hidden text-[11px] items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span id="activeTradeChartText">Entry: --</span>
-          </div>
         </div>
-
-        <!-- The Lightweight Charts Canvas Container -->
-        <div id="tvChartContainer" class="w-full h-[460px] relative bg-canvas"></div>
       </div>
 
-      <!-- RIGHT: AI STRATEGY CONSENSUS & RISK SENTINEL (4 Cols) -->
-      <div class="lg:col-span-4 space-y-3 flex flex-col justify-between">
-        
-        <!-- Signal Consensus Engine Card -->
-        <div class="bg-surface rounded-lg border border-borderSubtle p-3.5 shadow-sm space-y-3">
-          <div class="flex items-center justify-between border-b border-borderSubtle/60 pb-2">
+      <!-- CHART + RIGHT RAIL -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <div class="lg:col-span-8 bg-surface rounded-lg border border-borderSubtle flex flex-col overflow-hidden">
+          <div class="p-2.5 border-b border-borderSubtle flex flex-wrap items-center justify-between gap-2 bg-subtle/50">
             <div class="flex items-center gap-2">
-              <i data-lucide="cpu" class="w-4 h-4 text-accentAi"></i>
-              <span class="text-xs font-bold text-white uppercase tracking-wider">Multi-Agent Arbiter</span>
+              <span class="text-sm font-bold text-white flex items-center gap-1.5">
+                <span id="chartSymbolLabel">XAU/USD</span>
+                <span class="text-xs font-normal text-slate-400">· Spot Gold</span>
+              </span>
+              <div class="h-4 w-px bg-borderSubtle mx-1"></div>
+              <div class="flex items-center gap-1 bg-surface p-0.5 rounded border border-borderSubtle text-xs">
+                <button onclick="switchTimeframe('M1')" data-tf="M1" class="tfbtn px-2 py-0.5 rounded text-slate-400">1m</button>
+                <button onclick="switchTimeframe('M5')" data-tf="M5" class="tfbtn px-2 py-0.5 rounded text-slate-400">5m</button>
+                <button onclick="switchTimeframe('M15')" data-tf="M15" class="tfbtn px-2 py-0.5 rounded text-slate-400">15m</button>
+                <button onclick="switchTimeframe('H1')" data-tf="H1" class="tfbtn px-2 py-0.5 rounded text-slate-400">1h</button>
+                <button onclick="switchTimeframe('D1')" data-tf="D1" class="tfbtn px-2 py-0.5 rounded text-slate-400">1d</button>
+              </div>
             </div>
-            <button onclick="runManualScan()" class="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-semibold hover:bg-cyan-500/20 transition">
-              ⚡ Evaluate Now
+            <div class="flex items-center gap-3 text-[11px] num text-slate-400">
+              <span>O: <span id="legO" class="text-slate-200">--</span></span>
+              <span>H: <span id="legH" class="text-slate-200">--</span></span>
+              <span>L: <span id="legL" class="text-slate-200">--</span></span>
+              <span>C: <span id="legC" class="text-slate-200">--</span></span>
+              <span>Vol: <span id="legV" class="text-slate-400">--</span></span>
+            </div>
+          </div>
+          <div id="tvChartContainer" class="w-full h-[460px] relative bg-canvas"></div>
+        </div>
+
+        <div class="lg:col-span-4 space-y-3 flex flex-col">
+          <div class="bg-surface rounded-lg border border-borderSubtle p-3.5 space-y-3">
+            <div class="flex items-center justify-between border-b border-borderSubtle/60 pb-2">
+              <div class="flex items-center gap-2">
+                <i data-lucide="cpu" class="w-4 h-4 text-accentAi"></i>
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Multi-Agent Arbiter</span>
+              </div>
+              <button onclick="runScan()" class="btn bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20 !text-[10px] !py-0.5">⚡ Evaluate Now</button>
+            </div>
+            <div class="space-y-2.5 text-xs">
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400">Alpha ML (XGBoost)</span>
+                  <span id="intelXgbLabel" class="font-semibold text-slate-300 num">—</span>
+                </div>
+                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden"><div id="intelXgbBar" class="bg-emerald-500 h-full w-0"></div></div>
+              </div>
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400">Kronos Horizon Trend</span>
+                  <span id="intelKronosLabel" class="font-medium text-slate-300 num">—</span>
+                </div>
+                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden"><div id="intelKronosBar" class="bg-cyan-500 h-full w-0"></div></div>
+              </div>
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400">Macro (DXY + US10Y)</span>
+                  <span id="intelMacroLabel" class="font-medium text-slate-300 num">—</span>
+                </div>
+                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden"><div id="intelMacroBar" class="bg-indigo-500 h-full w-0"></div></div>
+              </div>
+              <div class="p-2 rounded bg-subtle border border-borderSubtle flex items-center justify-between text-[11px]">
+                <div class="flex items-center gap-1.5 text-slate-300"><i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i><span>News Filter:</span></div>
+                <span id="intelNewsLabel" class="font-semibold text-slate-300">—</span>
+              </div>
+            </div>
+            <div class="p-2.5 rounded-md bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between text-xs">
+              <span class="font-medium text-slate-300">Verdict:</span>
+              <span class="font-bold text-cyan-300 num" id="arbiterVerdict">—</span>
+            </div>
+          </div>
+
+          <div class="bg-surface rounded-lg border border-borderSubtle p-3.5 space-y-3">
+            <div class="flex items-center justify-between border-b border-borderSubtle/60 pb-2">
+              <div class="flex items-center gap-2">
+                <i data-lucide="shield" class="w-4 h-4 text-emerald-400"></i>
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Risk Sentinel</span>
+              </div>
+              <span class="text-[10px] text-slate-400 num" id="propProfileName">Profile: —</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="p-2 rounded bg-subtle border border-borderSubtle">
+                <span class="text-[10px] text-slate-400 uppercase">Daily Loss Limit</span>
+                <span id="riskDailyLoss" class="block num font-bold text-slate-200 mt-0.5">—</span>
+              </div>
+              <div class="p-2 rounded bg-subtle border border-borderSubtle">
+                <span class="text-[10px] text-slate-400 uppercase">Operating Ceiling</span>
+                <span id="riskOpCeiling" class="block num font-bold text-slate-200 mt-0.5">—</span>
+              </div>
+              <div class="p-2 rounded bg-subtle border border-borderSubtle">
+                <span class="text-[10px] text-slate-400 uppercase">Sizing</span>
+                <span id="riskSizing" class="block num font-bold text-emerald-400 mt-0.5">—</span>
+              </div>
+              <div class="p-2 rounded bg-subtle border border-borderSubtle">
+                <span class="text-[10px] text-slate-400 uppercase">Rate Limit</span>
+                <span id="riskRateLimit" class="block num font-bold text-slate-200 mt-0.5">—</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-[11px] pt-1">
+              <span class="text-slate-400">Copy-Trading</span>
+              <span id="copyTradingState" class="font-semibold text-slate-300">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOTTER -->
+      <div class="bg-surface rounded-lg border border-borderSubtle overflow-hidden">
+        <div class="border-b border-borderSubtle px-4 flex items-center justify-between bg-subtle/40">
+          <div class="flex items-center gap-4 text-xs font-semibold">
+            <button onclick="switchTableTab('positions')" data-tab="positions" class="tabbtn py-3 border-b-2 border-cyan-400 text-white flex items-center gap-2">
+              <i data-lucide="layers" class="w-3.5 h-3.5 text-cyan-400"></i><span>Active Positions</span>
+              <span id="tabCountPositions" class="px-1.5 rounded-full text-[10px] bg-slate-800 text-cyan-300 num">0</span>
+            </button>
+            <button onclick="switchTableTab('history')" data-tab="history" class="tabbtn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+              <i data-lucide="history" class="w-3.5 h-3.5"></i><span>Closed Deals</span>
+              <span id="tabCountHistory" class="px-1.5 rounded-full text-[10px] bg-slate-800 text-slate-400 num">0</span>
+            </button>
+            <button onclick="switchTableTab('signals')" data-tab="signals" class="tabbtn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+              <i data-lucide="radar" class="w-3.5 h-3.5"></i><span>Signal Decisions</span>
+              <span id="tabCountSignals" class="px-1.5 rounded-full text-[10px] bg-slate-800 text-slate-400 num">0</span>
             </button>
           </div>
-
-          <div class="space-y-2.5 text-xs">
-            <!-- Alpha ML (XGBoost) -->
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[11px]">
-                <span class="text-slate-400">Alpha ML (XGBoost Walk-Forward)</span>
-                <span id="intelXgbLabel" class="font-semibold text-emerald-400 num">BUY (64% calibrated)</span>
-              </div>
-              <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                <div id="intelXgbBar" class="bg-emerald-500 h-full w-[64%]"></div>
-              </div>
-            </div>
-
-            <!-- Kronos Foundation Model -->
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[11px]">
-                <span class="text-slate-400">Kronos Horizon Trend Slope</span>
-                <span id="intelKronosLabel" class="font-medium text-slate-300 num">+0.0038% (conf: 51%)</span>
-              </div>
-              <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                <div id="intelKronosBar" class="bg-cyan-500 h-full w-[51%]"></div>
-              </div>
-            </div>
-
-            <!-- Macro & DXY Bias -->
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[11px]">
-                <span class="text-slate-400">Macro Sentiment (DXY + US10Y)</span>
-                <span id="intelMacroLabel" class="font-medium text-slate-300 num">+0.05 (Neutral)</span>
-              </div>
-              <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                <div id="intelMacroBar" class="bg-indigo-500 h-full w-[52%]"></div>
-              </div>
-            </div>
-
-            <!-- News Blackout Sentinel -->
-            <div class="p-2 rounded bg-subtle border border-borderSubtle flex items-center justify-between text-[11px]">
-              <div class="flex items-center gap-1.5 text-slate-300">
-                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
-                <span>News Filter:</span>
-              </div>
-              <span id="intelNewsLabel" class="font-semibold text-emerald-400">CLEAR TO TRADE</span>
-            </div>
-          </div>
-
-          <!-- Consensus Decision Banner -->
-          <div class="p-2.5 rounded-md bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between text-xs">
-            <span class="font-medium text-slate-300">Current Verdict:</span>
-            <span class="font-bold text-cyan-300 num" id="arbiterVerdict">PAUSED BY KILL SWITCH</span>
-          </div>
+          <div class="text-[11px] text-slate-400">Bridge: <span id="bridgePollStatus" class="text-emerald-400 font-semibold">polling</span></div>
         </div>
 
-        <!-- Prop Risk Sentinel Card -->
-        <div class="bg-surface rounded-lg border border-borderSubtle p-3.5 shadow-sm space-y-3">
-          <div class="flex items-center justify-between border-b border-borderSubtle/60 pb-2">
-            <div class="flex items-center gap-2">
-              <i data-lucide="shield" class="w-4 h-4 text-emerald-400"></i>
-              <span class="text-xs font-bold text-white uppercase tracking-wider">Risk Sentinel & Prop Limits</span>
-            </div>
-            <span class="text-[10px] text-slate-400 num" id="propProfileName">Profile: default_demo</span>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2 text-xs">
-            <div class="p-2 rounded bg-subtle border border-borderSubtle">
-              <span class="text-[10px] text-slate-400 uppercase">Max Daily Loss</span>
-              <span class="block num font-bold text-slate-200 mt-0.5">$5,000 (5.0%)</span>
-            </div>
-            <div class="p-2 rounded bg-subtle border border-borderSubtle">
-              <span class="text-[10px] text-slate-400 uppercase">Operating Ceiling</span>
-              <span class="block num font-bold text-slate-200 mt-0.5">4.0% Drawdown</span>
-            </div>
-            <div class="p-2 rounded bg-subtle border border-borderSubtle">
-              <span class="text-[10px] text-slate-400 uppercase">Half-Kelly Sizing</span>
-              <span class="block num font-bold text-emerald-400 mt-0.5">0.01 - 0.50 Lots</span>
-            </div>
-            <div class="p-2 rounded bg-subtle border border-borderSubtle">
-              <span class="text-[10px] text-slate-400 uppercase">Rate Limit</span>
-              <span class="block num font-bold text-slate-200 mt-0.5">Max 3 ord / min</span>
-            </div>
-          </div>
+        <div id="panelPositions" class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-subtle/80 text-slate-400 border-b border-borderSubtle text-[11px]">
+              <tr>
+                <th class="py-2.5 px-3 font-medium">Ticket</th><th class="py-2.5 px-3 font-medium">Time (UTC)</th>
+                <th class="py-2.5 px-3 font-medium">Symbol</th><th class="py-2.5 px-3 font-medium">Side</th>
+                <th class="py-2.5 px-3 font-medium">Lots</th><th class="py-2.5 px-3 font-medium">Open</th>
+                <th class="py-2.5 px-3 font-medium">Mark</th><th class="py-2.5 px-3 font-medium">SL / TP</th>
+                <th class="py-2.5 px-3 font-medium text-right">Floating P&amp;L</th><th class="py-2.5 px-3 font-medium text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody id="positionsTableBody" class="divide-y divide-borderSubtle/60 num">
+              <tr><td colspan="10" class="py-8 text-center text-slate-500 font-sans">No active open trades.</td></tr>
+            </tbody>
+          </table>
         </div>
 
+        <div id="panelHistory" class="hidden overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-subtle/80 text-slate-400 border-b border-borderSubtle text-[11px]">
+              <tr>
+                <th class="py-2.5 px-3 font-medium">Deal</th><th class="py-2.5 px-3 font-medium">Time (UTC)</th>
+                <th class="py-2.5 px-3 font-medium">Symbol</th><th class="py-2.5 px-3 font-medium">Type</th>
+                <th class="py-2.5 px-3 font-medium">Lots</th><th class="py-2.5 px-3 font-medium">Price</th>
+                <th class="py-2.5 px-3 font-medium">Comm / Swap</th><th class="py-2.5 px-3 font-medium text-right">Realized P&amp;L</th>
+                <th class="py-2.5 px-3 font-medium">Comment</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody" class="divide-y divide-borderSubtle/60 num">
+              <tr><td colspan="9" class="py-6 text-center text-slate-500 font-sans">No recent closed deals.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="panelSignals" class="hidden overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-subtle/80 text-slate-400 border-b border-borderSubtle text-[11px]">
+              <tr>
+                <th class="py-2.5 px-3 font-medium">Time (UTC)</th><th class="py-2.5 px-3 font-medium">Symbol</th>
+                <th class="py-2.5 px-3 font-medium">Side</th><th class="py-2.5 px-3 font-medium">Win Prob</th>
+                <th class="py-2.5 px-3 font-medium">Kronos</th><th class="py-2.5 px-3 font-medium">Regime</th>
+                <th class="py-2.5 px-3 font-medium">Status</th><th class="py-2.5 px-3 font-medium">Rationale</th>
+              </tr>
+            </thead>
+            <tbody id="signalsTableBody" class="divide-y divide-borderSubtle/60 num">
+              <tr><td colspan="8" class="py-6 text-center text-slate-500 font-sans">No signal decisions recorded.</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- BOTTOM SECTION: ACTIVE POSITIONS, CLOSED DEALS, AND AI SIGNALS BLOTTER -->
-    <div class="bg-surface rounded-lg border border-borderSubtle shadow-sm overflow-hidden">
-      <!-- Tabs Header -->
-      <div class="border-b border-borderSubtle px-4 flex items-center justify-between bg-subtle/40">
-        <div class="flex items-center gap-4 text-xs font-semibold">
-          <button onclick="switchTableTab('positions')" id="tabBtnPositions" class="py-3 border-b-2 border-cyan-400 text-white flex items-center gap-2 transition">
-            <i data-lucide="layers" class="w-3.5 h-3.5 text-cyan-400"></i>
-            <span>Active MT5 Positions</span>
-            <span id="tabCountPositions" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-cyan-300 num">0</span>
-          </button>
-          <button onclick="switchTableTab('history')" id="tabBtnHistory" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition">
-            <i data-lucide="history" class="w-3.5 h-3.5"></i>
-            <span>Closed History & Deals</span>
-            <span id="tabCountHistory" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-400 num">0</span>
-          </button>
-          <button onclick="switchTableTab('signals')" id="tabBtnSignals" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition">
-            <i data-lucide="radar" class="w-3.5 h-3.5"></i>
-            <span>AI Signal Decisions</span>
-            <span id="tabCountSignals" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-400 num">0</span>
-          </button>
+    <!-- ============================ RESEARCH ============================ -->
+    <div id="view-research" class="hidden space-y-3">
+      <div class="bg-surface rounded-lg border border-borderSubtle p-4 space-y-4">
+        <div class="flex items-center gap-2">
+          <i data-lucide="flask-conical" class="w-4 h-4 text-accentConsensus"></i>
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider">Research Jobs</h2>
         </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+          <label class="flex items-center gap-2 p-2 rounded bg-subtle border border-borderSubtle"><input id="jobSynthetic" type="checkbox" checked class="accent-cyan-500">Synthetic data</label>
+          <label class="flex items-center gap-2 p-2 rounded bg-subtle border border-borderSubtle"><input id="jobPromote" type="checkbox" class="accent-cyan-500">Promote (walk-fwd)</label>
+          <label class="flex items-center gap-2 p-2 rounded bg-subtle border border-borderSubtle"><input id="jobApply" type="checkbox" class="accent-cyan-500">Apply (scan)</label>
+          <label class="p-2 rounded bg-subtle border border-borderSubtle">Days <input id="jobDays" type="number" value="800" min="10" class="field mt-1"></label>
+          <label class="p-2 rounded bg-subtle border border-borderSubtle">Seed <input id="jobSeed" type="number" value="42" class="field mt-1"></label>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="startJob('backtest')" class="btn bg-cyan-500/10 text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/20">Run Backtest</button>
+          <button onclick="startJob('walk-forward')" class="btn bg-purple-500/10 text-purple-300 border-purple-500/30 hover:bg-purple-500/20">Walk-Forward</button>
+          <button onclick="startJob('ablation')" class="btn bg-indigo-500/10 text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/20">Ablation</button>
+          <button onclick="startJob('replay')" class="btn bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20">Replay</button>
+          <button onclick="startJob('poll-leaders')" class="btn bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20">Poll Leaders</button>
+          <button onclick="startJob('scan-leaders')" class="btn bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20">Scan Leaders</button>
+          <button onclick="loadJobs()" class="btn bg-slate-700/40 text-slate-200 border-borderSubtle hover:bg-slate-700/70 ml-auto"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>Refresh</button>
+        </div>
+        <p class="text-[11px] text-slate-500">Jobs run server-side. Non-promoted walk-forward runs write to a per-job directory so the live model in <span class="num">data/models/wf_main</span> is never overwritten.</p>
+      </div>
 
-        <div class="text-[11px] text-slate-400 flex items-center gap-2">
-          <span>Bridge: <span class="text-emerald-400 font-semibold" id="bridgePollStatus">Active (polling)</span></span>
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <div class="lg:col-span-5 bg-surface rounded-lg border border-borderSubtle overflow-hidden">
+          <div class="px-3 py-2 border-b border-borderSubtle bg-subtle/50 text-xs font-bold text-white uppercase tracking-wider">Job Queue</div>
+          <div id="jobsList" class="divide-y divide-borderSubtle/60 max-h-[420px] overflow-y-auto text-xs">
+            <div class="p-4 text-center text-slate-500 font-sans">No jobs yet.</div>
+          </div>
+        </div>
+        <div class="lg:col-span-7 bg-surface rounded-lg border border-borderSubtle overflow-hidden">
+          <div class="px-3 py-2 border-b border-borderSubtle bg-subtle/50 flex items-center justify-between">
+            <span class="text-xs font-bold text-white uppercase tracking-wider">Job Detail</span>
+            <span id="jobDetailStatus" class="text-[11px] text-slate-400 num">—</span>
+          </div>
+          <div id="jobDetail" class="p-3 space-y-3 max-h-[420px] overflow-y-auto text-xs">
+            <div class="text-center text-slate-500 font-sans py-8">Select a job to inspect its log and results.</div>
+          </div>
         </div>
       </div>
+      <div id="equityChartWrap" class="hidden bg-surface rounded-lg border border-borderSubtle overflow-hidden">
+        <div class="px-3 py-2 border-b border-borderSubtle bg-subtle/50 text-xs font-bold text-white uppercase tracking-wider">Backtest Equity Curve</div>
+        <div id="equityChart" class="w-full h-[260px]"></div>
+      </div>
+    </div>
 
-      <!-- POSITIONS TABLE -->
-      <div id="panelPositions" class="overflow-x-auto">
-        <table class="w-full text-left text-xs">
-          <thead class="bg-subtle/80 text-slate-400 border-b border-borderSubtle text-[11px]">
-            <tr>
-              <th class="py-2.5 px-3 font-medium">Ticket</th>
-              <th class="py-2.5 px-3 font-medium">Time (UTC)</th>
-              <th class="py-2.5 px-3 font-medium">Symbol</th>
-              <th class="py-2.5 px-3 font-medium">Side</th>
-              <th class="py-2.5 px-3 font-medium">Lots</th>
-              <th class="py-2.5 px-3 font-medium">Open Price</th>
-              <th class="py-2.5 px-3 font-medium">Mark Price</th>
-              <th class="py-2.5 px-3 font-medium">SL / TP</th>
-              <th class="py-2.5 px-3 font-medium text-right">Floating P&L</th>
-              <th class="py-2.5 px-3 font-medium text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody id="positionsTableBody" class="divide-y divide-borderSubtle/60 num">
-            <tr>
-              <td colspan="10" class="py-8 text-center text-slate-500 font-sans">No active open trades. Desk is flat.</td>
-            </tr>
-          </tbody>
-        </table>
+    <!-- ============================ LEADERS ============================ -->
+    <div id="view-leaders" class="hidden space-y-3">
+      <div class="bg-surface rounded-lg border border-borderSubtle p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="users" class="w-4 h-4 text-accentLeader"></i>
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Leader Roster</h2>
+          </div>
+          <button onclick="loadRoster()" class="btn bg-slate-700/40 text-slate-200 border-borderSubtle hover:bg-slate-700/70"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>Refresh</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+          <label class="text-[11px] text-slate-400">Myfxbook ID<input id="leaderAddId" class="field mt-1" placeholder="e.g. 12345678"></label>
+          <label class="text-[11px] text-slate-400">Name<input id="leaderAddName" class="field mt-1" placeholder="optional"></label>
+          <label class="text-[11px] text-slate-400">URL<input id="leaderAddUrl" class="field mt-1" placeholder="optional"></label>
+          <div class="flex gap-2">
+            <button onclick="addLeader()" class="btn bg-cyan-500/10 text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/20">Add</button>
+            <button onclick="checkLeader()" class="btn bg-slate-700/40 text-slate-200 border-borderSubtle hover:bg-slate-700/70">Check Stats</button>
+          </div>
+        </div>
+        <div id="leaderCheckResult" class="hidden text-xs p-2.5 rounded bg-subtle border border-borderSubtle"></div>
       </div>
 
-      <!-- HISTORY DEALS TABLE -->
-      <div id="panelHistory" class="hidden overflow-x-auto">
-        <table class="w-full text-left text-xs">
-          <thead class="bg-subtle/80 text-slate-400 border-b border-borderSubtle text-[11px]">
-            <tr>
-              <th class="py-2.5 px-3 font-medium">Deal Ticket</th>
-              <th class="py-2.5 px-3 font-medium">Time (UTC)</th>
-              <th class="py-2.5 px-3 font-medium">Symbol</th>
-              <th class="py-2.5 px-3 font-medium">Type</th>
-              <th class="py-2.5 px-3 font-medium">Lots</th>
-              <th class="py-2.5 px-3 font-medium">Exec Price</th>
-              <th class="py-2.5 px-3 font-medium">Commission / Swap</th>
-              <th class="py-2.5 px-3 font-medium text-right">Realized P&L</th>
-              <th class="py-2.5 px-3 font-medium">Comment</th>
-            </tr>
-          </thead>
-          <tbody id="historyTableBody" class="divide-y divide-borderSubtle/60 num">
-            <tr>
-              <td colspan="9" class="py-6 text-center text-slate-500 font-sans">No recent closed deals.</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="bg-surface rounded-lg border border-borderSubtle overflow-hidden">
+        <div class="px-3 py-2 border-b border-borderSubtle bg-subtle/50 flex items-center gap-3 text-[11px]">
+          <span class="text-white font-bold uppercase tracking-wider text-xs">Candidates</span>
+          <span class="text-slate-400">Live: <span id="liveCount" class="num text-emerald-400">0</span></span>
+          <span class="text-slate-400">Watch: <span id="watchCount" class="num text-cyan-400">0</span></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-subtle/80 text-slate-400 border-b border-borderSubtle text-[11px]">
+              <tr>
+                <th class="py-2.5 px-3 font-medium">ID</th><th class="py-2.5 px-3 font-medium">Name</th>
+                <th class="py-2.5 px-3 font-medium">Tier</th><th class="py-2.5 px-3 font-medium">Score</th>
+                <th class="py-2.5 px-3 font-medium">Obs</th><th class="py-2.5 px-3 font-medium">Track Rec.</th>
+                <th class="py-2.5 px-3 font-medium">Privileges</th><th class="py-2.5 px-3 font-medium">Eligible</th>
+                <th class="py-2.5 px-3 font-medium text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="leadersTableBody" class="divide-y divide-borderSubtle/60 num">
+              <tr><td colspan="9" class="py-8 text-center text-slate-500 font-sans">Roster empty. Add a leader or run "<span class="font-sans">Scan Leaders</span>" in Research.</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
+    </div>
 
-      <!-- AI SIGNALS BLOTTER TABLE -->
-      <div id="panelSignals" class="hidden overflow-x-auto">
-        <table class="w-full text-left text-xs">
-          <thead class="bg-subtle/80 text-slate-400 border-b border-borderSubtle text-[11px]">
-            <tr>
-              <th class="py-2.5 px-3 font-medium">Timestamp (UTC)</th>
-              <th class="py-2.5 px-3 font-medium">Symbol</th>
-              <th class="py-2.5 px-3 font-medium">Signal Side</th>
-              <th class="py-2.5 px-3 font-medium">XGB Win Prob</th>
-              <th class="py-2.5 px-3 font-medium">Kronos Forecast</th>
-              <th class="py-2.5 px-3 font-medium">Market Regime</th>
-              <th class="py-2.5 px-3 font-medium">Decision Status</th>
-              <th class="py-2.5 px-3 font-medium">Arbiter Rationale</th>
-            </tr>
-          </thead>
-          <tbody id="signalsTableBody" class="divide-y divide-borderSubtle/60 num">
-            <tr>
-              <td colspan="8" class="py-6 text-center text-slate-500 font-sans">Click "⚡ Evaluate Now" or "Scan Market" to run an AI scan.</td>
-            </tr>
-          </tbody>
-        </table>
+    <!-- ============================ LOGS ============================ -->
+    <div id="view-logs" class="hidden space-y-3">
+      <div class="flex items-center gap-2">
+        <button onclick="loadLogs()" class="btn bg-slate-700/40 text-slate-200 border-borderSubtle hover:bg-slate-700/70"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>Refresh</button>
+        <span class="text-[11px] text-slate-500">Audit trail of every control-plane action + risk-engine events.</span>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div class="bg-surface rounded-lg border border-borderSubtle overflow-hidden">
+          <div class="px-3 py-2 border-b border-borderSubtle bg-subtle/50 text-xs font-bold text-white uppercase tracking-wider">Audit Log</div>
+          <div class="overflow-x-auto max-h-[520px] overflow-y-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-subtle/80 text-slate-400 border-b border-borderSubtle text-[11px] sticky top-0">
+                <tr><th class="py-2 px-3 font-medium">Time</th><th class="py-2 px-3 font-medium">Component</th><th class="py-2 px-3 font-medium">Event</th><th class="py-2 px-3 font-medium">Detail</th></tr>
+              </thead>
+              <tbody id="auditTableBody" class="divide-y divide-borderSubtle/60 num">
+                <tr><td colspan="4" class="py-6 text-center text-slate-500 font-sans">No audit entries.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="bg-surface rounded-lg border border-borderSubtle overflow-hidden">
+          <div class="px-3 py-2 border-b border-borderSubtle bg-subtle/50 text-xs font-bold text-white uppercase tracking-wider">Risk Events</div>
+          <div class="overflow-x-auto max-h-[520px] overflow-y-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-subtle/80 text-slate-400 border-b border-borderSubtle text-[11px] sticky top-0">
+                <tr><th class="py-2 px-3 font-medium">Time</th><th class="py-2 px-3 font-medium">Event</th><th class="py-2 px-3 font-medium">Severity</th><th class="py-2 px-3 font-medium">Action</th><th class="py-2 px-3 font-medium">Detail</th></tr>
+              </thead>
+              <tbody id="riskEventsTableBody" class="divide-y divide-borderSubtle/60 num">
+                <tr><td colspan="5" class="py-6 text-center text-slate-500 font-sans">No risk events.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ CONFIG ============================ -->
+    <div id="view-config" class="hidden space-y-3">
+      <div class="bg-surface rounded-lg border border-borderSubtle p-4 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="settings-2" class="w-4 h-4 text-slate-300"></i>
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Runtime Configuration</h2>
+          </div>
+          <button onclick="loadConfig()" class="btn bg-slate-700/40 text-slate-200 border-borderSubtle hover:bg-slate-700/70"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>Reload</button>
+        </div>
+        <div id="configIntegrations" class="flex flex-wrap gap-2 text-[11px]"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+          <label class="text-[11px] text-slate-400">Trading Mode
+            <select id="cfgTradingMode" class="field mt-1">
+              <option value="paper">paper</option><option value="prop_eval">prop_eval</option>
+              <option value="live">live</option><option value="replay">replay</option><option value="backtest">backtest</option>
+            </select>
+          </label>
+          <label class="text-[11px] text-slate-400">Prop Profile
+            <select id="cfgProfile" class="field mt-1"></select>
+          </label>
+          <label class="text-[11px] text-slate-400">Execution Driver
+            <select id="cfgDriver" class="field mt-1">
+              <option value="paper">paper</option><option value="ea">ea</option><option value="metaapi">metaapi</option>
+            </select>
+          </label>
+          <label class="text-[11px] text-slate-400">Symbol<input id="cfgSymbol" class="field mt-1"></label>
+          <label class="text-[11px] text-slate-400">Timeframe
+            <select id="cfgTimeframe" class="field mt-1">
+              <option>M1</option><option>M5</option><option>M15</option><option>M30</option><option>H1</option><option>H4</option><option>D1</option>
+            </select>
+          </label>
+          <label class="text-[11px] text-slate-400">Meta-Model Threshold (0.55–0.95)<input id="cfgThreshold" type="number" step="0.01" min="0.55" max="0.95" class="field mt-1"></label>
+          <label class="text-[11px] text-slate-400">Min Leader Score<input id="cfgMinLeaderScore" type="number" step="0.1" min="0" class="field mt-1"></label>
+          <label class="text-[11px] text-slate-400">Max Live Leaders<input id="cfgMaxLive" type="number" min="1" class="field mt-1"></label>
+          <label class="text-[11px] text-slate-400">Max Watch Leaders<input id="cfgMaxWatch" type="number" min="1" class="field mt-1"></label>
+          <label class="text-[11px] text-slate-400">Live Pool Size<input id="cfgPoolSize" type="number" min="1" class="field mt-1"></label>
+          <label class="text-[11px] text-slate-400">Myfxbook Poll Interval (s)<input id="cfgPollInterval" type="number" min="30" class="field mt-1"></label>
+          <label class="flex items-center gap-2 text-[11px] text-slate-400 mt-5"><input id="cfgPersist" type="checkbox" checked class="accent-cyan-500">Persist to .env</label>
+        </div>
+        <div class="flex items-center gap-3 pt-1">
+          <button onclick="saveConfig()" class="btn bg-cyan-500/10 text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/20"><i data-lucide="save" class="w-3.5 h-3.5"></i>Save Configuration</button>
+          <span id="configMsg" class="text-xs"></span>
+        </div>
+        <p class="text-[11px] text-slate-500">Effective DB: <span id="cfgDbUrl" class="num">—</span>. Changes apply to the running process immediately; "Persist" also writes them to <span class="num">.env</span> for the next restart.</p>
+      </div>
+    </div>
+
+    <!-- ============================ MODEL ============================ -->
+    <div id="view-model" class="hidden space-y-3">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div class="bg-surface rounded-lg border border-borderSubtle overflow-hidden">
+          <div class="px-3 py-2 border-b border-borderSubtle bg-subtle/50 flex items-center justify-between">
+            <span class="text-xs font-bold text-white uppercase tracking-wider">Meta-Model Registry</span>
+            <button onclick="loadModel()" class="btn bg-slate-700/40 text-slate-200 border-borderSubtle hover:bg-slate-700/70 !py-0.5"><i data-lucide="refresh-cw" class="w-3 h-3"></i></button>
+          </div>
+          <div id="modelInfo" class="p-3 text-xs space-y-3"><div class="text-slate-500 font-sans">Loading…</div></div>
+        </div>
+        <div class="bg-surface rounded-lg border border-borderSubtle overflow-hidden">
+          <div class="px-3 py-2 border-b border-borderSubtle bg-subtle/50 text-xs font-bold text-white uppercase tracking-wider">CLI Reference</div>
+          <div id="cliRef" class="p-3 text-xs space-y-2 max-h-[480px] overflow-y-auto"><div class="text-slate-500 font-sans">Loading…</div></div>
+        </div>
       </div>
     </div>
 
   </main>
 
-  <!-- CONFIRMATION MODAL -->
+  <!-- CONFIRM MODAL -->
   <div id="confirmModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-surface border border-borderSubtle rounded-xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+    <div class="bg-surface border border-borderSubtle rounded-xl max-w-md w-full p-5 space-y-4 shadow-2xl">
       <div class="flex items-center gap-3">
-        <div id="modalIconContainer" class="w-9 h-9 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center flex-shrink-0">
-          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
-        </div>
-        <div>
-          <h3 id="modalTitle" class="text-sm font-bold text-white">Emergency Stop Confirmation</h3>
-          <p id="modalDescription" class="text-xs text-slate-400 mt-0.5">Are you sure you want to arm the Kill Switch?</p>
-        </div>
+        <div id="modalIconContainer" class="w-9 h-9 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center flex-shrink-0"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div>
+        <div><h3 id="modalTitle" class="text-sm font-bold text-white">Confirm</h3><p id="modalDescription" class="text-xs text-slate-400 mt-0.5"></p></div>
       </div>
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-borderSubtle">
-        <button onclick="closeConfirmModal()" class="px-3 py-1.5 rounded text-xs font-medium text-slate-300 hover:bg-slate-800 transition">
-          Cancel
-        </button>
-        <button id="modalConfirmBtn" onclick="confirmAction()" class="px-3.5 py-1.5 rounded text-xs font-bold bg-rose-600 text-white hover:bg-rose-500 transition shadow-sm">
-          Confirm
-        </button>
+        <button onclick="closeConfirmModal()" class="btn text-slate-300 hover:bg-slate-800">Cancel</button>
+        <button id="modalConfirmBtn" onclick="confirmAction()" class="btn bg-rose-600 text-white hover:bg-rose-500">Confirm</button>
       </div>
     </div>
   </div>
 
-  <!-- JAVASCRIPT APP LOGIC -->
+  <!-- NEW ORDER MODAL -->
+  <div id="orderModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-surface border border-borderSubtle rounded-xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center flex-shrink-0"><i data-lucide="plus-circle" class="w-5 h-5"></i></div>
+        <div><h3 class="text-sm font-bold text-white">Manual Order Ticket</h3><p class="text-xs text-slate-400 mt-0.5">Routed through the risk engine. Requires the kill switch to be in "TRADING ENABLED" state.</p></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 text-xs">
+        <label class="text-[11px] text-slate-400">Side
+          <select id="orderSide" class="field mt-1"><option value="buy">BUY</option><option value="sell">SELL</option></select>
+        </label>
+        <label class="text-[11px] text-slate-400">Symbol<input id="orderSymbol" class="field mt-1"></label>
+        <label class="text-[11px] text-slate-400">Volume (lots)<input id="orderVolume" type="number" step="0.01" min="0.01" class="field mt-1" placeholder="risk-engine default"></label>
+        <label class="text-[11px] text-slate-400">Stop (points)<input id="orderStop" type="number" step="0.5" min="0.5" value="5" class="field mt-1"></label>
+        <label class="text-[11px] text-slate-400">Take-Profit (points)<input id="orderTp" type="number" step="0.5" min="0" class="field mt-1" placeholder="2× stop"></label>
+        <label class="flex items-center gap-2 text-[11px] text-slate-400 mt-5 col-span-2"><input id="orderConfirm" type="checkbox" class="accent-cyan-500">I confirm this places a real order at market.</label>
+      </div>
+      <div id="orderResult" class="hidden text-xs p-2.5 rounded border"></div>
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-borderSubtle">
+        <button onclick="closeOrderModal()" class="btn text-slate-300 hover:bg-slate-800">Cancel</button>
+        <button onclick="submitOrder()" class="btn bg-cyan-600 text-white hover:bg-cyan-500">Place Order</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOASTS -->
+  <div id="toasts" class="fixed bottom-4 right-4 z-[60] space-y-2 w-80"></div>
+
   <script>
-    let currentTimeframe = 'M15';
-    let tvChart = null;
-    let candleSeries = null;
-    let volumeSeries = null;
-    let entryPriceLine = null;
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const usd = (n, d = 2) => (n == null || isNaN(n)) ? '$--' : (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+    const pct = (n, d = 2) => (n == null || isNaN(n)) ? '--' : `${n.toFixed(d)}%`;
+    const timeStr = (s) => s ? String(s).slice(0, 19).replace('T', ' ') : '';
+
+    async function api(method, path, body) {
+      const opts = { method, headers: { 'Content-Type': 'application/json' } };
+      if (body !== undefined) opts.body = JSON.stringify(body);
+      const res = await fetch(path, opts);
+      const text = await res.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch (e) { data = { detail: text }; }
+      if (!res.ok) {
+        const detail = (data && data.detail) ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : `HTTP ${res.status}`;
+        throw new Error(detail);
+      }
+      return data;
+    }
+
+    function toast(msg, type = 'info') {
+      const colors = { info: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200', ok: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200', err: 'border-rose-500/40 bg-rose-500/10 text-rose-200' };
+      const el = document.createElement('div');
+      el.className = `p-3 rounded-lg border text-xs ${colors[type] || colors.info} shadow-lg`;
+      el.innerText = msg;
+      $('toasts').appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 350); }, 4200);
+    }
+
+    // ------------------------------------------------------------------ state
+    const state = { tf: 'M15', section: 'desk', killEnabled: true, liveIds: new Set(), jobsTimer: null, lastEquity: null, selectedJob: null };
+    let tvChart = null, candleSeries = null, volumeSeries = null, entryPriceLine = null;
+    let equityChart = null, equitySeries = null;
     let pendingModalAction = null;
-    let isKillSwitchArmed = true;
-    let lastEquity = null;
 
     lucide.createIcons();
 
-    function updateClock() {
-      const now = new Date();
-      document.getElementById('utcClock').innerText = now.toUTCString().slice(17, 25) + ' UTC';
+    // ------------------------------------------------------------------ clock
+    function updateClock() { $('utcClock').innerText = new Date().toUTCString().slice(17, 25) + ' UTC'; }
+    setInterval(updateClock, 1000); updateClock();
+
+    // ------------------------------------------------------------------ sections
+    function showSection(name) {
+      state.section = name;
+      ['desk', 'research', 'leaders', 'logs', 'config', 'model'].forEach(s => {
+        $('view-' + s).classList.toggle('hidden', s !== name);
+      });
+      document.querySelectorAll('[data-nav]').forEach(b => {
+        const on = b.dataset.nav === name;
+        b.classList.toggle('active', on);
+        b.classList.toggle('text-white', on);
+        b.classList.toggle('text-slate-400', !on);
+      });
+      if (name === 'desk') { if (tvChart) setTimeout(resizeChart, 30); }
+      if (name === 'research') { loadJobs(); startJobsPolling(); } else { stopJobsPolling(); }
+      if (name === 'leaders') loadRoster();
+      if (name === 'logs') loadLogs();
+      if (name === 'config') loadConfig();
+      if (name === 'model') { loadModel(); loadCli(); }
     }
-    setInterval(updateClock, 1000);
-    updateClock();
+
+    // ------------------------------------------------------------------ chart
+    function resizeChart() { const c = $('tvChartContainer'); if (tvChart && c) tvChart.applyOptions({ width: c.clientWidth }); }
 
     function initChart() {
-      const container = document.getElementById('tvChartContainer');
+      const container = $('tvChartContainer');
       container.innerHTML = '';
-
       tvChart = LightweightCharts.createChart(container, {
-        width: container.clientWidth,
-        height: 460,
-        layout: {
-          background: { color: '#070A13' },
-          textColor: '#94A3B8',
-          fontSize: 11,
-          fontFamily: 'JetBrains Mono',
-        },
-        grid: {
-          vertLines: { color: '#0E1424' },
-          horzLines: { color: '#0E1424' },
-        },
-        crosshair: {
-          mode: LightweightCharts.CrosshairMode.Normal,
-          vertLine: { color: '#38BDF8', width: 1, style: 3 },
-          horzLine: { color: '#38BDF8', width: 1, style: 3 },
-        },
-        rightPriceScale: {
-          borderColor: '#1E293B',
-          scaleMargins: { top: 0.1, bottom: 0.2 },
-        },
-        timeScale: {
-          borderColor: '#1E293B',
-          timeVisible: true,
-          secondsVisible: false,
-        },
+        width: container.clientWidth, height: 460,
+        layout: { background: { color: '#070A13' }, textColor: '#94A3B8', fontSize: 11, fontFamily: 'JetBrains Mono' },
+        grid: { vertLines: { color: '#0E1424' }, horzLines: { color: '#0E1424' } },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: '#38BDF8', width: 1, style: 3 }, horzLine: { color: '#38BDF8', width: 1, style: 3 } },
+        rightPriceScale: { borderColor: '#1E293B', scaleMargins: { top: 0.1, bottom: 0.2 } },
+        timeScale: { borderColor: '#1E293B', timeVisible: true, secondsVisible: false },
       });
-
-      candleSeries = tvChart.addCandlestickSeries({
-        upColor: '#10B981',
-        downColor: '#F43F5E',
-        borderUpColor: '#10B981',
-        borderDownColor: '#F43F5E',
-        wickUpColor: '#10B981',
-        wickDownColor: '#F43F5E',
-      });
-
-      volumeSeries = tvChart.addHistogramSeries({
-        color: '#26a69a',
-        priceFormat: { type: 'volume' },
-        priceScaleId: '',
-        scaleMargins: { top: 0.8, bottom: 0 },
-      });
-
+      candleSeries = tvChart.addCandlestickSeries({ upColor: '#10B981', downColor: '#F43F5E', borderUpColor: '#10B981', borderDownColor: '#F43F5E', wickUpColor: '#10B981', wickDownColor: '#F43F5E' });
+      volumeSeries = tvChart.addHistogramSeries({ color: '#26a69a', priceFormat: { type: 'volume' }, priceScaleId: '', scaleMargins: { top: 0.8, bottom: 0 } });
       tvChart.subscribeCrosshairMove(param => {
         if (!param || !param.time || !param.seriesData.get(candleSeries)) return;
-        const candle = param.seriesData.get(candleSeries);
-        const vol = param.seriesData.get(volumeSeries);
-        if (candle) {
-          document.getElementById('legO').innerText = candle.open ? candle.open.toFixed(2) : '--';
-          document.getElementById('legH').innerText = candle.high ? candle.high.toFixed(2) : '--';
-          document.getElementById('legL').innerText = candle.low ? candle.low.toFixed(2) : '--';
-          document.getElementById('legC').innerText = candle.close ? candle.close.toFixed(2) : '--';
-          document.getElementById('legV').innerText = vol && vol.value ? vol.value.toLocaleString() : '--';
+        const c = param.seriesData.get(candleSeries), v = param.seriesData.get(volumeSeries);
+        if (c) {
+          $('legO').innerText = c.open != null ? c.open.toFixed(2) : '--';
+          $('legH').innerText = c.high != null ? c.high.toFixed(2) : '--';
+          $('legL').innerText = c.low != null ? c.low.toFixed(2) : '--';
+          $('legC').innerText = c.close != null ? c.close.toFixed(2) : '--';
+          $('legV').innerText = v && v.value != null ? v.value.toLocaleString() : '--';
         }
       });
-
-      window.addEventListener('resize', () => {
-        if (tvChart && container) {
-          tvChart.applyOptions({ width: container.clientWidth });
-        }
-      });
+      window.addEventListener('resize', resizeChart);
     }
 
     async function loadCandles() {
       try {
-        const res = await fetch(`/api/dashboard/candles?symbol=XAUUSD&timeframe=${currentTimeframe}&limit=250`);
-        const data = await res.json();
-        if (data && data.candles && data.candles.length > 0) {
-          const candleData = [];
-          const volumeData = [];
-
-          data.candles.forEach(c => {
-            candleData.push({
-              time: c.time,
-              open: c.open,
-              high: c.high,
-              low: c.low,
-              close: c.close,
-            });
-            volumeData.push({
-              time: c.time,
-              value: c.volume,
-              color: c.close >= c.open ? 'rgba(16, 185, 129, 0.4)' : 'rgba(244, 63, 94, 0.4)'
-            });
-          });
-
-          candleSeries.setData(candleData);
-          volumeSeries.setData(volumeData);
-
-          const latest = candleData[candleData.length - 1];
-          const latestVol = volumeData[volumeData.length - 1];
-          if (latest) {
-            document.getElementById('legO').innerText = latest.open.toFixed(2);
-            document.getElementById('legH').innerText = latest.high.toFixed(2);
-            document.getElementById('legL').innerText = latest.low.toFixed(2);
-            document.getElementById('legC').innerText = latest.close.toFixed(2);
-            document.getElementById('legV').innerText = latestVol ? latestVol.value.toLocaleString() : '--';
-          }
-
-          loadChartMarkers();
+        const data = await api('GET', `/api/dashboard/candles?symbol=${encodeURIComponent($('headerSymbolLabel').innerText || 'XAUUSD')}&timeframe=${state.tf}&limit=250`);
+        if (!data || !data.candles || !data.candles.length) return;
+        const cd = [], vd = [];
+        data.candles.forEach(c => {
+          cd.push({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close });
+          vd.push({ time: c.time, value: c.volume, color: c.close >= c.open ? 'rgba(16,185,129,0.4)' : 'rgba(244,63,94,0.4)' });
+        });
+        candleSeries.setData(cd); volumeSeries.setData(vd);
+        const last = cd[cd.length - 1], lastVol = vd[vd.length - 1];
+        if (last) {
+          $('legO').innerText = last.open.toFixed(2); $('legH').innerText = last.high.toFixed(2);
+          $('legL').innerText = last.low.toFixed(2); $('legC').innerText = last.close.toFixed(2);
+          $('legV').innerText = lastVol ? lastVol.value.toLocaleString() : '--';
         }
-      } catch (err) {
-        console.error('Failed to load candles:', err);
-      }
+        loadMarkers();
+      } catch (e) { console.error('candles', e); }
     }
 
-    async function loadChartMarkers() {
+    async function loadMarkers() {
       try {
-        const res = await fetch('/api/dashboard/markers');
-        const data = await res.json();
-        if (candleSeries && data && data.markers) {
-          candleSeries.setMarkers(data.markers);
-        }
-      } catch (err) {
-        console.error('Failed to load markers:', err);
-      }
+        const data = await api('GET', '/api/dashboard/markers');
+        if (candleSeries && data && data.markers) candleSeries.setMarkers(data.markers);
+      } catch (e) { console.error('markers', e); }
     }
 
     function switchTimeframe(tf) {
-      currentTimeframe = tf;
-      document.querySelectorAll('[id^="tf-"]').forEach(btn => {
-        btn.className = 'px-2 py-0.5 rounded hover:bg-slate-800 text-slate-400 transition';
-      });
-      const activeBtn = document.getElementById(`tf-${tf}`);
-      if (activeBtn) {
-        activeBtn.className = 'px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-bold transition';
-      }
-      document.getElementById('headerTfLabel').innerText = tf;
+      state.tf = tf;
+      document.querySelectorAll('.tfbtn').forEach(b => b.className = 'tfbtn px-2 py-0.5 rounded text-slate-400');
+      const btn = document.querySelector(`.tfbtn[data-tf="${tf}"]`);
+      if (btn) btn.className = 'tfbtn px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-bold';
+      $('headerTfLabel').innerText = tf;
       loadCandles();
     }
 
-    async function fetchOverview() {
+    // ------------------------------------------------------------------ overview
+    async function refreshOverview() {
       try {
-        const res = await fetch('/api/dashboard/overview');
-        const data = await res.json();
+        const data = await api('GET', '/api/dashboard/overview');
         if (!data || data.status !== 'ok') return;
+        const acc = data.account || {}, sys = data.system || {}, risk = data.risk || {}, intel = data.intelligence || {}, positions = data.open_positions || [], profile = sys.active_profile || '—';
 
-        const acc = data.account || {};
-        const sys = data.system || {};
-        const risk = data.risk || {};
-        const intel = data.intelligence || {};
-        const positions = data.open_positions || [];
+        // kill switch (truthful): enabled == trading allowed
+        state.killEnabled = !!sys.kill_switch_armed;
+        applyKillSwitchUI();
 
-        // Kill Switch
-        isKillSwitchArmed = sys.kill_switch_armed;
-        const btnKs = document.getElementById('btnKillSwitch');
-        const ksText = document.getElementById('killSwitchBtnText');
-        const alertBanner = document.getElementById('systemAlertBanner');
-        const arbiterVerdict = document.getElementById('arbiterVerdict');
+        $('badgeTradingMode').innerText = `${(sys.trading_mode || 'paper').toUpperCase()} · ${(sys.execution_driver || '').toUpperCase()}`;
+        $('headerSymbolLabel').innerText = sys.symbol || 'XAUUSD';
+        $('headerTfLabel').innerText = sys.timeframe || state.tf;
+        $('chartSymbolLabel').innerText = (sys.symbol || 'XAUUSD').replace('USD', '/USD');
+        $('propProfileName').innerText = 'Profile: ' + profile;
 
-        if (isKillSwitchArmed) {
-          btnKs.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition-all shadow-sm active:scale-95 border bg-rose-500/10 text-rose-400 border-rose-500/40 hover:bg-rose-500/20';
-          ksText.innerText = 'KILL SWITCH: ARMED';
-          alertBanner.classList.remove('hidden');
-          arbiterVerdict.innerText = 'PAUSED BY KILL SWITCH';
-          arbiterVerdict.className = 'font-bold text-amber-400 num';
-        } else {
-          btnKs.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition-all shadow-sm active:scale-95 border bg-emerald-500/10 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/20';
-          ksText.innerText = 'SYSTEM: ACTIVE';
-          alertBanner.classList.add('hidden');
-          arbiterVerdict.innerText = 'ACTIVE · CONSENSUS ARMED';
-          arbiterVerdict.className = 'font-bold text-emerald-400 num';
-        }
-
-        // Account
+        // health
+        setHealth(!!acc.connected, acc.connected ? 'MT5 live' : 'MT5 offline');
         if (acc.connected) {
-          document.getElementById('mt5StatusPill').classList.remove('hidden');
-          document.getElementById('mt5StatusDot').className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
-          document.getElementById('mt5AccountLabel').innerText = `MT5: #${acc.login} (${acc.server})`;
-          document.getElementById('kpiBalance').innerText = `$${acc.balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-          
-          const eqEl = document.getElementById('kpiEquity');
-          if (lastEquity !== null && lastEquity !== acc.equity) {
-            eqEl.classList.remove('flash-green', 'flash-red');
-            void eqEl.offsetWidth;
-            eqEl.classList.add(acc.equity > lastEquity ? 'flash-green' : 'flash-red');
-          }
-          lastEquity = acc.equity;
-          eqEl.innerText = `$${acc.equity.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-
-          const pnlEl = document.getElementById('kpiFloatingPnl');
-          pnlEl.innerText = `${acc.profit >= 0 ? '+$' : '-$'}${Math.abs(acc.profit).toFixed(2)}`;
-          pnlEl.className = `num text-xl font-bold ${acc.profit >= 0 ? (acc.profit > 0 ? 'text-emerald-400' : 'text-slate-300') : 'text-rose-400'}`;
-
-          document.getElementById('kpiFreeMargin').innerText = `$${acc.margin_free.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-          document.getElementById('kpiBrokerServer').innerText = `${acc.server} · ${acc.name}`;
+          $('mt5StatusPill').classList.remove('hidden');
+          $('mt5StatusDot').className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+          $('mt5AccountLabel').innerText = `MT5: #${acc.login} (${acc.server})`;
+        } else {
+          $('mt5StatusDot').className = 'w-2 h-2 rounded-full bg-slate-500';
+          $('mt5AccountLabel').innerText = 'MT5: offline';
         }
 
-        // AI Intelligence
-        document.getElementById('kpiRegime').innerText = intel.market_regime || 'RANGING';
-        document.getElementById('kpiMacroNote').innerText = intel.macro_bias_note || 'Macro Neutral';
-        const aiProb = (intel.ai_probability_up * 100).toFixed(1);
-        document.getElementById('kpiAiProb').innerText = `${aiProb}%`;
-        document.getElementById('aiProbBar').style.width = `${aiProb}%`;
-        document.getElementById('kpiAiEdgeLabel').innerText = intel.ai_probability_up >= 0.5 ? 'BUY Edge' : 'SELL Edge';
-
-        document.getElementById('intelXgbLabel').innerText = `${intel.ai_probability_up >= 0.5 ? 'BUY' : 'SELL'} (${aiProb}% win prob)`;
-        document.getElementById('intelXgbBar').style.width = `${aiProb}%`;
-
-        const kSlope = intel.kronos_forecast_pct || 0.0;
-        document.getElementById('intelKronosLabel').innerText = `${kSlope >= 0 ? '+' : ''}${kSlope.toFixed(4)}% (conf: ${(intel.kronos_conf * 100).toFixed(0)}%)`;
-        document.getElementById('intelKronosBar').style.width = `${(intel.kronos_conf * 100).toFixed(0)}%`;
-
-        document.getElementById('intelMacroLabel').innerText = `${intel.macro_bias_score >= 0 ? '+' : ''}${intel.macro_bias_score.toFixed(3)} (${intel.macro_bias_note})`;
-        document.getElementById('intelNewsLabel').innerText = intel.news_filter_status || 'CLEAR TO TRADE';
-
-        // Drawdown
-        const ddPct = risk.current_drawdown_pct || 0.0;
-        const maxDd = risk.daily_loss_limit_pct || 5.0;
-        document.getElementById('dailyDdText').innerText = `${ddPct.toFixed(2)}% / ${maxDd.toFixed(1)}%`;
-        const barWidth = Math.min(100, (ddPct / maxDd) * 100);
-        const ddBar = document.getElementById('dailyDdBar');
-        ddBar.style.width = `${barWidth}%`;
-        ddBar.className = ddPct > 3.5 ? 'bg-rose-500 h-full transition-all' : (ddPct > 2.0 ? 'bg-amber-500 h-full transition-all' : 'bg-emerald-500 h-full transition-all');
-
-        // Positions
-        document.getElementById('kpiOpenPositionsCount').innerText = `${positions.length} Active Position${positions.length === 1 ? '' : 's'}`;
-        document.getElementById('tabCountPositions').innerText = positions.length;
-        renderPositionsTable(positions);
-        updateChartTradeMarker(positions);
-
-      } catch (err) {
-        console.error('Failed to fetch overview:', err);
-      }
-    }
-
-    function renderPositionsTable(positions) {
-      const tbody = document.getElementById('positionsTableBody');
-      if (!positions || positions.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="10" class="py-8 text-center text-slate-500 font-sans">
-              <div class="flex flex-col items-center justify-center gap-1">
-                <i data-lucide="check-circle" class="w-5 h-5 text-slate-600"></i>
-                <span>No active open trades. Desk is flat.</span>
-              </div>
-            </td>
-          </tr>
-        `;
-        lucide.createIcons();
-        return;
-      }
-
-      let html = '';
-      positions.forEach(p => {
-        const isLong = p.side === 'BUY';
-        const pnlClass = p.profit >= 0 ? 'text-emerald-400' : 'text-rose-400';
-        const formattedPnl = `${p.profit >= 0 ? '+$' : '-$'}${Math.abs(p.profit).toFixed(2)}`;
-        const timeStr = p.time.slice(11, 19);
-
-        html += `
-          <tr class="hover:bg-subtle/50 transition">
-            <td class="py-2.5 px-3 font-semibold text-slate-300">#${p.ticket}</td>
-            <td class="py-2.5 px-3 text-slate-400 text-[11px]">${timeStr}</td>
-            <td class="py-2.5 px-3 font-bold text-white">${p.symbol}</td>
-            <td class="py-2.5 px-3">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isLong ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
-                ${p.side}
-              </span>
-            </td>
-            <td class="py-2.5 px-3 font-medium text-slate-200">${p.volume.toFixed(2)}</td>
-            <td class="py-2.5 px-3 font-medium text-slate-300">$${p.price_open.toFixed(2)}</td>
-            <td class="py-2.5 px-3 font-bold text-white">$${p.price_current.toFixed(2)}</td>
-            <td class="py-2.5 px-3 text-slate-400 text-[11px]">${p.sl ? `$${p.sl.toFixed(2)}` : 'None'} / ${p.tp ? `$${p.tp.toFixed(2)}` : 'None'}</td>
-            <td class="py-2.5 px-3 text-right font-bold ${pnlClass}">${formattedPnl}</td>
-            <td class="py-2.5 px-3 text-center">
-              <button onclick="requestClosePosition(${p.ticket})" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-300 border border-borderSubtle text-[11px] font-semibold transition active:scale-95">
-                Close
-              </button>
-            </td>
-          </tr>
-        `;
-      });
-      tbody.innerHTML = html;
-      lucide.createIcons();
-    }
-
-    function updateChartTradeMarker(positions) {
-      const badge = document.getElementById('activeTradeChartBadge');
-      const badgeText = document.getElementById('activeTradeChartText');
-
-      if (positions && positions.length > 0) {
-        const p = positions[0];
-        badge.classList.remove('hidden');
-        badge.classList.add('flex');
-        badgeText.innerText = `${p.side} ${p.volume} @ $${p.price_open.toFixed(2)} (Ticket #${p.ticket})`;
-
-        if (candleSeries) {
-          if (!entryPriceLine) {
-            entryPriceLine = candleSeries.createPriceLine({
-              price: p.price_open,
-              color: p.side === 'BUY' ? '#10B981' : '#F43F5E',
-              lineWidth: 2,
-              lineStyle: LightweightCharts.LineStyle.Dashed,
-              axisLabelVisible: true,
-              title: `${p.side} Entry #${p.ticket}`,
-            });
-          } else {
-            entryPriceLine.applyOptions({
-              price: p.price_open,
-              color: p.side === 'BUY' ? '#10B981' : '#F43F5E',
-              title: `${p.side} Entry #${p.ticket}`,
-            });
-          }
+        // account KPIs (fall back to equity when disconnected)
+        const equity = acc.equity != null ? acc.equity : null;
+        $('kpiBalance').innerText = usd(acc.balance);
+        $('kpiBrokerServer').innerText = acc.connected ? `${acc.server} · ${acc.name}` : 'disconnected';
+        const eqEl = $('kpiEquity');
+        if (equity != null && state.lastEquity != null && equity !== state.lastEquity) {
+          eqEl.classList.remove('flash-green', 'flash-red'); void eqEl.offsetWidth;
+          eqEl.classList.add(equity > state.lastEquity ? 'flash-green' : 'flash-red');
         }
+        if (equity != null) state.lastEquity = equity;
+        eqEl.innerText = usd(equity);
+        $('kpiEquityPct').innerText = (acc.balance && equity != null) ? `${(((equity - acc.balance) / acc.balance) * 100).toFixed(2)}% vs Balance` : '—';
+        const pnl = acc.profit != null ? acc.profit : 0;
+        $('kpiFloatingPnl').innerText = usd(pnl);
+        $('kpiFloatingPnl').className = `num text-xl font-bold ${pnl > 0 ? 'text-emerald-400' : (pnl < 0 ? 'text-rose-400' : 'text-slate-300')}`;
+        $('kpiOpenPositionsCount').innerText = `${positions.length} Position${positions.length === 1 ? '' : 's'}`;
+        $('kpiFreeMargin').innerText = usd(acc.margin_free);
+
+        // intelligence
+        $('kpiRegime').innerText = intel.market_regime || '—';
+        $('kpiMacroNote').innerText = intel.macro_bias_note || '—';
+        const aiProb = (intel.ai_probability_up != null ? intel.ai_probability_up * 100 : null);
+        $('kpiAiProb').innerText = aiProb != null ? aiProb.toFixed(1) + '%' : '--%';
+        $('aiProbBar').style.width = (aiProb || 0) + '%';
+        $('kpiAiEdgeLabel').innerText = intel.ai_probability_up >= 0.5 ? 'BUY Edge' : 'SELL Edge';
+        $('intelXgbLabel').innerText = `${intel.ai_probability_up >= 0.5 ? 'BUY' : 'SELL'} (${aiProb != null ? aiProb.toFixed(1) : '--'}%)`;
+        $('intelXgbBar').style.width = (aiProb || 0) + '%';
+        const kSlope = intel.kronos_forecast_pct || 0;
+        $('intelKronosLabel').innerText = `${kSlope >= 0 ? '+' : ''}${kSlope.toFixed(4)}% (conf ${((intel.kronos_conf || 0) * 100).toFixed(0)}%)`;
+        $('intelKronosBar').style.width = `${((intel.kronos_conf || 0) * 100).toFixed(0)}%`;
+        $('intelMacroLabel').innerText = `${(intel.macro_bias_score || 0) >= 0 ? '+' : ''}${(intel.macro_bias_score || 0).toFixed(3)} (${intel.macro_bias_note || '—'})`;
+        $('intelMacroBar').style.width = `${Math.min(100, Math.abs((intel.macro_bias_score || 0)) * 100 + 50)}%`;
+        $('intelNewsLabel').innerText = intel.news_filter_status || '—';
+
+        // risk sentinel
+        const ddPct = risk.current_drawdown_pct || 0, maxDd = risk.daily_loss_limit_pct || 5;
+        $('dailyDdText').innerText = `${ddPct.toFixed(2)}% / ${maxDd.toFixed(1)}%`;
+        const ddBar = $('dailyDdBar');
+        ddBar.style.width = `${Math.min(100, (ddPct / maxDd) * 100)}%`;
+        ddBar.className = ddPct > maxDd * 0.7 ? 'bg-rose-500 h-full transition-all' : (ddPct > maxDd * 0.4 ? 'bg-amber-500 h-full transition-all' : 'bg-emerald-500 h-full transition-all');
+        $('riskDailyLoss').innerText = pct(maxDd, 1);
+        $('riskOpCeiling').innerText = pct(risk.emergency_limit_pct != null ? risk.emergency_limit_pct : risk.max_drawdown_limit_pct, 1);
+        $('riskSizing').innerText = 'per-profile';
+        $('riskRateLimit').innerText = `${risk.orders_per_minute || '—'} ord / min`;
+
+        // positions + tables
+        $('tabCountPositions').innerText = positions.length;
+        renderPositions(positions);
+        updateEntryLine(positions);
+      } catch (e) { console.error('overview', e); setHealth(false, 'API error'); }
+    }
+
+    function setHealth(ok, label) {
+      $('healthDot').className = `w-1.5 h-1.5 rounded-full ${ok ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'}`;
+      $('healthLabel').innerText = label;
+    }
+
+    // ------------------------------------------------------------------ kill switch
+    function applyKillSwitchUI() {
+      const btn = $('btnKillSwitch'), txt = $('killSwitchBtnText');
+      if (state.killEnabled) {
+        btn.className = 'btn border bg-emerald-500/10 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/20';
+        txt.innerText = 'TRADING ENABLED';
       } else {
-        badge.classList.add('hidden');
-        badge.classList.remove('flex');
-        if (candleSeries && entryPriceLine) {
-          candleSeries.removePriceLine(entryPriceLine);
-          entryPriceLine = null;
-        }
+        btn.className = 'btn border bg-rose-500/10 text-rose-400 border-rose-500/40 hover:bg-rose-500/20';
+        txt.innerText = 'KILL SWITCH ENGAGED';
       }
-    }
-
-    async function switchTableTab(tab) {
-      const posBtn = document.getElementById('tabBtnPositions');
-      const histBtn = document.getElementById('tabBtnHistory');
-      const sigBtn = document.getElementById('tabBtnSignals');
-
-      const posPanel = document.getElementById('panelPositions');
-      const histPanel = document.getElementById('panelHistory');
-      const sigPanel = document.getElementById('panelSignals');
-
-      // Reset tabs
-      [posBtn, histBtn, sigBtn].forEach(b => b.className = 'py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition');
-      [posPanel, histPanel, sigPanel].forEach(p => p.classList.add('hidden'));
-
-      if (tab === 'positions') {
-        posBtn.className = 'py-3 border-b-2 border-cyan-400 text-white flex items-center gap-2 transition';
-        posPanel.classList.remove('hidden');
-      } else if (tab === 'history') {
-        histBtn.className = 'py-3 border-b-2 border-cyan-400 text-white flex items-center gap-2 transition';
-        histPanel.classList.remove('hidden');
-        loadHistoryDeals();
-      } else if (tab === 'signals') {
-        sigBtn.className = 'py-3 border-b-2 border-cyan-400 text-white flex items-center gap-2 transition';
-        sigPanel.classList.remove('hidden');
-        loadSignalsLog();
-      }
-    }
-
-    async function loadHistoryDeals() {
-      try {
-        const res = await fetch('/api/dashboard/history?days=30');
-        const data = await res.json();
-        const tbody = document.getElementById('historyTableBody');
-        const deals = data.deals || [];
-        document.getElementById('tabCountHistory').innerText = deals.length;
-
-        if (deals.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="9" class="py-6 text-center text-slate-500 font-sans">No closed deals in the last 30 days.</td></tr>`;
-          return;
-        }
-
-        let html = '';
-        deals.forEach(d => {
-          const isProfit = d.profit >= 0;
-          const pnlClass = isProfit ? (d.profit > 0 ? 'text-emerald-400' : 'text-slate-300') : 'text-rose-400';
-          html += `
-            <tr class="hover:bg-subtle/50 transition">
-              <td class="py-2 px-3 font-semibold text-slate-300">#${d.ticket}</td>
-              <td class="py-2 px-3 text-slate-400 text-[11px]">${d.time.slice(0, 19).replace('T', ' ')}</td>
-              <td class="py-2 px-3 font-medium text-white">${d.symbol}</td>
-              <td class="py-2 px-3">
-                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${d.type === 'BUY' ? 'bg-emerald-500/10 text-emerald-400' : (d.type === 'SELL' ? 'bg-rose-500/10 text-rose-400' : 'bg-slate-700 text-slate-300')}">
-                  ${d.type}
-                </span>
-              </td>
-              <td class="py-2 px-3">${d.volume.toFixed(2)}</td>
-              <td class="py-2 px-3">$${d.price.toFixed(2)}</td>
-              <td class="py-2 px-3 text-slate-400">$${(d.commission + d.swap).toFixed(2)}</td>
-              <td class="py-2 px-3 text-right font-bold ${pnlClass}">${isProfit ? (d.profit > 0 ? '+$' : '$') : '-$'}${Math.abs(d.profit).toFixed(2)}</td>
-              <td class="py-2 px-3 text-slate-400 text-[11px] truncate max-w-xs">${d.comment}</td>
-            </tr>
-          `;
-        });
-        tbody.innerHTML = html;
-      } catch (err) {
-        console.error('Failed to load history deals:', err);
-      }
-    }
-
-    async function loadSignalsLog() {
-      try {
-        const res = await fetch('/api/dashboard/signals');
-        const signals = await res.json();
-        const tbody = document.getElementById('signalsTableBody');
-        document.getElementById('tabCountSignals').innerText = signals.length;
-
-        if (signals.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="8" class="py-6 text-center text-slate-500 font-sans">No recent signal records. Click "Scan Market" to run an AI scan.</td></tr>`;
-          return;
-        }
-
-        let html = '';
-        signals.forEach(s => {
-          const isApproved = s.status === 'approved';
-          const statusClass = isApproved ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-400 border border-borderSubtle';
-          const sideClass = s.side === 'BUY' ? 'text-emerald-400 font-bold' : (s.side === 'SELL' ? 'text-rose-400 font-bold' : 'text-slate-400');
-
-          html += `
-            <tr class="hover:bg-subtle/50 transition">
-              <td class="py-2 px-3 text-slate-400 text-[11px]">${s.timestamp.slice(0, 19).replace('T', ' ')}</td>
-              <td class="py-2 px-3 font-semibold text-white">${s.symbol}</td>
-              <td class="py-2 px-3 ${sideClass}">${s.side}</td>
-              <td class="py-2 px-3 font-medium text-cyan-300">${(s.probability * 100).toFixed(1)}%</td>
-              <td class="py-2 px-3 text-slate-300">${s.kronos_forecast_pct >= 0 ? '+' : ''}${s.kronos_forecast_pct.toFixed(4)}%</td>
-              <td class="py-2 px-3 text-slate-400 text-[11px]">${s.regime}</td>
-              <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[10px] uppercase font-semibold ${statusClass}">${s.status}</span></td>
-              <td class="py-2 px-3 text-slate-300 text-[11px] truncate max-w-sm">${s.reason}</td>
-            </tr>
-          `;
-        });
-        tbody.innerHTML = html;
-      } catch (err) {
-        console.error('Failed to load signals:', err);
-      }
-    }
-
-    async function runManualScan() {
-      try {
-        const res = await fetch('/api/dashboard/scan', { method: 'POST' });
-        const resData = await res.json();
-        alert(`AI Scan Complete!\nSignal: ${resData.signal}\nStatus: ${resData.status}\nRationale: ${resData.reason}`);
-        fetchOverview();
-        loadSignalsLog();
-      } catch (err) {
-        alert('Scan failed: ' + err);
-      }
-    }
-
-    function showModal(title, desc, confirmText, action) {
-      document.getElementById('modalTitle').innerText = title;
-      document.getElementById('modalDescription').innerText = desc;
-      document.getElementById('modalConfirmBtn').innerText = confirmText;
-      pendingModalAction = action;
-      document.getElementById('confirmModal').classList.remove('hidden');
-    }
-
-    function closeConfirmModal() {
-      document.getElementById('confirmModal').classList.add('hidden');
-      pendingModalAction = null;
-    }
-
-    async function confirmAction() {
-      if (pendingModalAction) await pendingModalAction();
-      closeConfirmModal();
+      const verdict = $('arbiterVerdict');
+      if (!state.killEnabled) { verdict.innerText = 'BLOCKED · KILL SWITCH'; verdict.className = 'font-bold text-rose-400 num'; }
+      else { verdict.innerText = 'TRADING ENABLED'; verdict.className = 'font-bold text-emerald-400 num'; }
     }
 
     function toggleKillSwitch() {
-      if (isKillSwitchArmed) {
-        showModal(
-          'Disarm Kill Switch & Resume Trading?',
-          'This will allow the Consensus Arbiter and MT5 execution engine to autonomously dispatch trade orders when setups are confirmed.',
-          'Disarm & Allow Trading',
-          async () => {
-            await fetch('/api/risk/killswitch', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ enabled: false }),
-            });
-            fetchOverview();
-          }
-        );
+      if (state.killEnabled) {
+        showConfirm('Engage Kill Switch?', 'Immediately blocks ALL new order dispatches (engine rejects every order). Open positions are unaffected.', 'Engage Kill Switch', async () => {
+          await api('PUT', '/api/risk/killswitch', { enabled: false }); toast('Kill switch engaged — trading blocked', 'err'); refreshOverview();
+        });
       } else {
-        showModal(
-          'ARM Emergency Kill Switch?',
-          'This immediately blocks all new trade order dispatches to MetaTrader 5 terminal.',
-          'Arm Kill Switch',
-          async () => {
-            await fetch('/api/risk/killswitch', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ enabled: true }),
-            });
-            fetchOverview();
-          }
-        );
+        showConfirm('Resume Trading?', 'Re-enables order dispatch: the risk engine will approve orders that pass profiling.', 'Resume Trading', async () => {
+          await api('PUT', '/api/risk/killswitch', { enabled: true }); toast('Trading enabled', 'ok'); refreshOverview();
+        });
       }
     }
 
-    function requestClosePosition(ticket) {
-      showModal(
-        `Close Position #${ticket}?`,
-        `This will immediately send a market close order to MetaTrader 5 terminal to liquidate this trade at current market price.`,
-        'Close Position',
-        async () => {
-          try {
-            const res = await fetch('/api/dashboard/close-position', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ticket: ticket }),
-            });
-            const result = await res.json();
-            if (result.ok) {
-              fetchOverview();
-              loadCandles();
-            } else {
-              alert(`Close failed: ${result.error || 'Unknown error'}`);
-            }
-          } catch (err) {
-            alert(`Close request error: ${err}`);
-          }
-        }
-      );
+    // ------------------------------------------------------------------ positions
+    function positionRows(positions) { return (positions || []).map(p => ({ ...p })); }
+
+    function renderPositions(positions) {
+      const tb = $('positionsTableBody');
+      if (!positions || !positions.length) {
+        tb.innerHTML = `<tr><td colspan="10" class="py-8 text-center text-slate-500 font-sans">No active open trades. Desk is flat.</td></tr>`;
+        return;
+      }
+      tb.innerHTML = positions.map(p => {
+        const isLong = p.side === 'BUY', pnl = p.profit || 0;
+        return `<tr class="hover:bg-subtle/50 transition">
+          <td class="py-2.5 px-3 font-semibold text-slate-300">#${esc(p.ticket)}</td>
+          <td class="py-2.5 px-3 text-slate-400 text-[11px]">${esc(timeStr(p.time).slice(11, 19))}</td>
+          <td class="py-2.5 px-3 font-bold text-white">${esc(p.symbol)}</td>
+          <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${isLong ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${esc(p.side)}</span></td>
+          <td class="py-2.5 px-3 font-medium text-slate-200">${(p.volume || 0).toFixed(2)}</td>
+          <td class="py-2.5 px-3 font-medium text-slate-300">$${(p.price_open || 0).toFixed(2)}</td>
+          <td class="py-2.5 px-3 font-bold text-white">$${(p.price_current || 0).toFixed(2)}</td>
+          <td class="py-2.5 px-3 text-slate-400 text-[11px]">${p.sl ? '$' + p.sl.toFixed(2) : 'None'} / ${p.tp ? '$' + p.tp.toFixed(2) : 'None'}</td>
+          <td class="py-2.5 px-3 text-right font-bold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${usd(pnl)}</td>
+          <td class="py-2.5 px-3 text-center"><button onclick="requestClose(${p.ticket})" class="btn bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-300 border-borderSubtle !text-[11px] !py-1">Close</button></td>
+        </tr>`;
+      }).join('');
     }
 
+    function updateEntryLine(positions) {
+      if (positions && positions.length && candleSeries) {
+        const p = positions[0];
+        if (!entryPriceLine) {
+          entryPriceLine = candleSeries.createPriceLine({ price: p.price_open, color: p.side === 'BUY' ? '#10B981' : '#F43F5E', lineWidth: 2, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: `${p.side} #${p.ticket}` });
+        } else {
+          entryPriceLine.applyOptions({ price: p.price_open, color: p.side === 'BUY' ? '#10B981' : '#F43F5E', title: `${p.side} #${p.ticket}` });
+        }
+      } else if (candleSeries && entryPriceLine) { candleSeries.removePriceLine(entryPriceLine); entryPriceLine = null; }
+    }
+
+    function requestClose(ticket) {
+      showConfirm(`Close Position #${ticket}?`, 'Sends a market close order to MetaTrader 5 at the current price.', 'Close Position', async () => {
+        try { await api('POST', '/api/dashboard/close-position', { ticket }); toast(`Close sent for #${ticket}`, 'ok'); refreshOverview(); loadCandles(); }
+        catch (e) { toast('Close failed: ' + e.message, 'err'); }
+      });
+    }
+
+    // ------------------------------------------------------------------ blotter tabs
+    function switchTableTab(tab) {
+      ['positions', 'history', 'signals'].forEach(t => {
+        $('panel' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('hidden', t !== tab);
+      });
+      document.querySelectorAll('.tabbtn').forEach(b => {
+        const on = b.dataset.tab === tab;
+        b.className = `tabbtn py-3 border-b-2 ${on ? 'border-cyan-400 text-white' : 'border-transparent text-slate-400 hover:text-slate-200'} flex items-center gap-2`;
+      });
+      if (tab === 'history') loadHistory();
+      if (tab === 'signals') loadSignals();
+    }
+
+    async function loadHistory() {
+      try {
+        const data = await api('GET', '/api/dashboard/history?days=30');
+        const deals = data.deals || [];
+        $('tabCountHistory').innerText = deals.length;
+        const tb = $('historyTableBody');
+        if (!deals.length) { tb.innerHTML = `<tr><td colspan="9" class="py-6 text-center text-slate-500 font-sans">No closed deals in the last 30 days.</td></tr>`; return; }
+        tb.innerHTML = deals.map(d => {
+          const pnl = d.profit || 0;
+          return `<tr class="hover:bg-subtle/50 transition">
+            <td class="py-2 px-3 font-semibold text-slate-300">#${esc(d.ticket)}</td>
+            <td class="py-2 px-3 text-slate-400 text-[11px]">${esc(timeStr(d.time))}</td>
+            <td class="py-2 px-3 font-medium text-white">${esc(d.symbol)}</td>
+            <td class="py-2 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${d.type === 'BUY' ? 'bg-emerald-500/10 text-emerald-400' : (d.type === 'SELL' ? 'bg-rose-500/10 text-rose-400' : 'bg-slate-700 text-slate-300')}">${esc(d.type)}</span></td>
+            <td class="py-2 px-3">${(d.volume || 0).toFixed(2)}</td>
+            <td class="py-2 px-3">$${(d.price || 0).toFixed(2)}</td>
+            <td class="py-2 px-3 text-slate-400">$${((d.commission || 0) + (d.swap || 0)).toFixed(2)}</td>
+            <td class="py-2 px-3 text-right font-bold ${pnl > 0 ? 'text-emerald-400' : (pnl < 0 ? 'text-rose-400' : 'text-slate-300')}">${usd(pnl)}</td>
+            <td class="py-2 px-3 text-slate-400 text-[11px] truncate max-w-xs">${esc(d.comment)}</td>
+          </tr>`;
+        }).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadSignals() {
+      try {
+        const signals = await api('GET', '/api/dashboard/signals');
+        $('tabCountSignals').innerText = signals.length;
+        const tb = $('signalsTableBody');
+        if (!signals.length) { tb.innerHTML = `<tr><td colspan="8" class="py-6 text-center text-slate-500 font-sans">No signal decisions recorded yet.</td></tr>`; return; }
+        tb.innerHTML = signals.map(s => {
+          const ok = s.status === 'approved';
+          const sideCls = s.side === 'BUY' ? 'text-emerald-400 font-bold' : (s.side === 'SELL' ? 'text-rose-400 font-bold' : 'text-slate-400');
+          return `<tr class="hover:bg-subtle/50 transition">
+            <td class="py-2 px-3 text-slate-400 text-[11px]">${esc(timeStr(s.timestamp))}</td>
+            <td class="py-2 px-3 font-semibold text-white">${esc(s.symbol)}</td>
+            <td class="py-2 px-3 ${sideCls}">${esc(s.side)}</td>
+            <td class="py-2 px-3 font-medium text-cyan-300">${s.probability != null ? (s.probability * 100).toFixed(1) + '%' : '--'}</td>
+            <td class="py-2 px-3 text-slate-300">${(s.kronos_forecast_pct >= 0 ? '+' : '') + (s.kronos_forecast_pct || 0).toFixed(4)}%</td>
+            <td class="py-2 px-3 text-slate-400 text-[11px]">${esc(s.regime)}</td>
+            <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[10px] uppercase font-semibold ${ok ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-400 border border-borderSubtle'}">${esc(s.status)}</span></td>
+            <td class="py-2 px-3 text-slate-300 text-[11px] truncate max-w-sm">${esc(s.reason)}</td>
+          </tr>`;
+        }).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    async function runScan() {
+      try {
+        const r = await api('POST', '/api/dashboard/scan');
+        toast(`Scan: ${r.signal} · ${r.status} · ${r.reason}`, r.status === 'approved' ? 'ok' : 'info');
+        refreshOverview(); loadSignals();
+      } catch (e) { toast('Scan failed: ' + e.message, 'err'); }
+    }
+
+    // ------------------------------------------------------------------ jobs
+    function jobParams() {
+      return {
+        synthetic: $('jobSynthetic').checked,
+        days: parseInt($('jobDays').value, 10) || 800,
+        seed: parseInt($('jobSeed').value, 10) || 42,
+        promote: $('jobPromote').checked,
+        apply: $('jobApply').checked,
+      };
+    }
+
+    async function startJob(kind) {
+      try {
+        const job = await api('POST', `/api/ops/jobs/${encodeURIComponent(kind)}`, { params: jobParams() });
+        toast(`Job "${kind}" queued (${job.id})`, 'info');
+        state.selectedJob = job.id; loadJobs();
+      } catch (e) { toast('Failed to start job: ' + e.message, 'err'); }
+    }
+
+    async function loadJobs() {
+      try {
+        const jobs = await api('GET', '/api/ops/jobs');
+        const box = $('jobsList');
+        if (!jobs.length) { box.innerHTML = `<div class="p-4 text-center text-slate-500 font-sans">No jobs yet.</div>`; return; }
+        box.innerHTML = jobs.map(j => {
+          const badge = j.status === 'done' ? 'text-emerald-400' : (j.status === 'error' ? 'text-rose-400' : (j.status === 'running' ? 'text-cyan-400' : 'text-slate-400'));
+          const sel = state.selectedJob === j.id ? 'bg-subtle' : '';
+          return `<button onclick="selectJob('${j.id}')" class="w-full text-left p-3 hover:bg-subtle/60 transition ${sel}">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-white">${esc(j.kind)} <span class="text-slate-500 num text-[10px]">${esc(j.id)}</span></span>
+              <span class="num text-[11px] uppercase ${badge}">${esc(j.status)}</span>
+            </div>
+            <div class="text-[10px] text-slate-500 num mt-0.5">${esc(timeStr(j.created_at))}</div>
+          </button>`;
+        }).join('');
+        if (state.selectedJob) selectJob(state.selectedJob, true);
+      } catch (e) { console.error(e); }
+    }
+
+    async function selectJob(id, silent) {
+      state.selectedJob = id;
+      try {
+        const j = await api('GET', `/api/ops/jobs/${encodeURIComponent(id)}`);
+        $('jobDetailStatus').innerText = `${j.kind} · ${j.status}`;
+        $('jobDetail').innerHTML = `
+          <div class="flex flex-wrap gap-2 text-[11px]">
+            <span class="px-2 py-0.5 rounded bg-subtle border border-borderSubtle num">id ${esc(j.id)}</span>
+            <span class="px-2 py-0.5 rounded bg-subtle border border-borderSubtle">params ${esc(JSON.stringify(j.params || {}))}</span>
+          </div>
+          ${j.error ? `<div class="p-2.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300">${esc(j.error)}</div>` : ''}
+          ${j.result ? `<div id="jobResultBox">${renderJobResult(j.kind, j.result)}</div>` : ''}
+          <div>
+            <div class="text-[11px] text-slate-400 uppercase tracking-wider mb-1">Log</div>
+            <pre class="text-[11px] num bg-canvas border border-borderSubtle rounded p-2 max-h-48 overflow-y-auto whitespace-pre-wrap">${esc((j.log || []).join('\n')) || '—'}</pre>
+          </div>`;
+        if (j.kind === 'backtest' && j.result && j.result.equity_curve) renderEquityChart(j.result.equity_curve);
+        else $('equityChartWrap').classList.add('hidden');
+        if (!silent) lucide.createIcons();
+      } catch (e) { console.error(e); }
+    }
+
+    function metric(label, value, cls) {
+      return `<div class="p-2 rounded bg-subtle border border-borderSubtle"><span class="text-[10px] text-slate-400 uppercase">${esc(label)}</span><span class="block num font-bold ${cls || 'text-slate-100'} mt-0.5">${esc(value)}</span></div>`;
+    }
+
+    function renderJobResult(kind, r) {
+      if (kind === 'backtest') {
+        return `<div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          ${metric('Trades', r.n_trades)}${metric('Wins', r.wins, 'text-emerald-400')}${metric('Losses', r.losses, 'text-rose-400')}
+          ${metric('Win rate', (r.win_rate != null ? (r.win_rate <= 1 ? r.win_rate * 100 : r.win_rate).toFixed(1) + '%' : '—'))}
+          ${metric('Return', (r.total_return_pct || 0).toFixed(2) + '%', (r.total_return_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'))}
+          ${metric('Max DD', (r.max_drawdown_pct || 0).toFixed(2) + '%', 'text-amber-400')}
+          ${metric('Sharpe', (r.sharpe || 0).toFixed(3))}${metric('Profit factor', (r.profit_factor || 0).toFixed(3))}
+          ${metric('Brier', (r.brier_score || 0).toFixed(3))}${metric('Commission', usd(r.total_commission_paid))}
+          ${metric('Slippage', usd(r.total_slippage_paid))}${metric('Swap', usd(r.total_swap_paid))}
+        </div>`;
+      }
+      if (kind === 'walk-forward') {
+        const folds = r.folds || [];
+        return `<div class="text-[11px] text-slate-300 mb-1">promoted: <span class="font-bold ${r.promoted ? 'text-emerald-400' : 'text-slate-400'}">${r.promoted}</span> · out_dir: <span class="num">${esc(r.out_dir)}</span></div>
+          ${r.leakage ? `<div class="text-[11px] text-slate-400 mb-2">leakage: causal=${r.leakage.features_causal} kronos_overlap=${r.leakage.kronos_test_overlap}</div>` : ''}
+          <div class="overflow-x-auto"><table class="w-full text-left text-[11px]">
+          <thead class="text-slate-400 border-b border-borderSubtle"><tr>
+            <th class="py-1.5 pr-3">Fold</th><th class="py-1.5 pr-3">Winner</th><th class="py-1.5 pr-3">LogLoss</th>
+            <th class="py-1.5 pr-3">AUC</th><th class="py-1.5 pr-3">Brier</th><th class="py-1.5 pr-3">ECE</th>
+            <th class="py-1.5 pr-3">n_train</th><th class="py-1.5 pr-3">n_test</th></tr></thead><tbody class="num">
+          ${folds.map(f => `<tr class="border-b border-borderSubtle/40">
+            <td class="py-1.5 pr-3">${esc(f.fold_name)}</td><td class="py-1.5 pr-3">${esc(f.winner)}</td>
+            <td class="py-1.5 pr-3">${(f.test_logloss || 0).toFixed(4)}</td>
+            <td class="py-1.5 pr-3 ${(f.test_auc || 0) < 0.55 ? 'text-amber-400' : 'text-slate-200'}">${(f.test_auc || 0).toFixed(4)}</td>
+            <td class="py-1.5 pr-3">${(f.brier_score || 0).toFixed(4)}</td><td class="py-1.5 pr-3">${(f.ece || 0).toFixed(4)}</td>
+            <td class="py-1.5 pr-3">${esc(f.n_train)}</td><td class="py-1.5 pr-3">${esc(f.n_test)}</td></tr>`).join('')}
+          </tbody></table></div>`;
+      }
+      if (kind === 'ablation') {
+        const rows = r.rows || [];
+        if (!rows.length) return `<div class="text-slate-500">No ablation rows.</div>`;
+        const cols = Object.keys(rows[0]);
+        return `<div class="overflow-x-auto"><table class="w-full text-left text-[11px]"><thead class="text-slate-400 border-b border-borderSubtle"><tr>
+          ${cols.map(c => `<th class="py-1.5 pr-3">${esc(c)}</th>`).join('')}</tr></thead><tbody class="num">
+          ${rows.map(row => `<tr class="border-b border-borderSubtle/40">${cols.map(c => `<td class="py-1.5 pr-3">${esc(typeof row[c] === 'number' ? row[c].toFixed(4) : row[c])}</td>`).join('')}</tr>`).join('')}
+        </tbody></table></div>`;
+      }
+      if (kind === 'replay') {
+        return `<div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          ${metric('Bars seen', r.bars_seen)}${metric('Signals', r.signals_fired)}${metric('Filled', r.orders_filled, 'text-emerald-400')}${metric('Rejected', r.rejected, 'text-rose-400')}
+        </div>`;
+      }
+      if (kind === 'poll-leaders') return metric('Inserted', r.inserted);
+      if (kind === 'scan-leaders') return `<div class="text-[11px] text-slate-300">${esc(JSON.stringify(r))}</div>`;
+      return `<pre class="text-[11px] num whitespace-pre-wrap">${esc(JSON.stringify(r, null, 2))}</pre>`;
+    }
+
+    function renderEquityChart(curve) {
+      $('equityChartWrap').classList.remove('hidden');
+      const container = $('equityChart');
+      if (!equityChart) {
+        container.innerHTML = '';
+        equityChart = LightweightCharts.createChart(container, {
+          width: container.clientWidth, height: 260,
+          layout: { background: { color: '#070A13' }, textColor: '#94A3B8', fontSize: 11, fontFamily: 'JetBrains Mono' },
+          grid: { vertLines: { color: '#0E1424' }, horzLines: { color: '#0E1424' } },
+          rightPriceScale: { borderColor: '#1E293B' }, timeScale: { borderColor: '#1E293B', timeVisible: true },
+        });
+        equitySeries = equityChart.addAreaSeries({ lineColor: '#06B6D4', topColor: 'rgba(6,182,212,0.35)', bottomColor: 'rgba(6,182,212,0.02)', lineWidth: 2 });
+        window.addEventListener('resize', () => { if (equityChart) equityChart.applyOptions({ width: container.clientWidth }); });
+      }
+      const seen = new Set();
+      const data = [];
+      for (const pt of curve) {
+        // Lightweight Charts needs strictly increasing times; business-day strings collapse duplicates
+        const t = String(pt.time).slice(0, 10);
+        if (seen.has(t)) continue;
+        seen.add(t);
+        data.push({ time: t, value: pt.equity });
+      }
+      equitySeries.setData(data);
+      equityChart.timeScale().fitContent();
+    }
+
+    function startJobsPolling() { stopJobsPolling(); state.jobsTimer = setInterval(loadJobs, 2000); }
+    function stopJobsPolling() { if (state.jobsTimer) { clearInterval(state.jobsTimer); state.jobsTimer = null; } }
+
+    // ------------------------------------------------------------------ leaders
+    async function loadRoster() {
+      try {
+        const data = await api('GET', '/api/ops/leaders/roster-full');
+        state.liveIds = new Set(data.live || []);
+        $('liveCount').innerText = (data.live || []).length;
+        $('watchCount').innerText = (data.watch || []).length;
+        const tb = $('leadersTableBody');
+        const cands = data.candidates || [];
+        if (!cands.length) { tb.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-500 font-sans">Roster empty. Add a leader above or run "Scan Leaders" in Research.</td></tr>`; return; }
+        tb.innerHTML = cands.map(c => {
+          const live = c.tier === 'live';
+          return `<tr class="hover:bg-subtle/50 transition">
+            <td class="py-2 px-3 font-semibold text-slate-300">${esc(c.id)}</td>
+            <td class="py-2 px-3 text-white">${esc(c.name) || '—'}</td>
+            <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${live ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-400 border border-borderSubtle'}">${esc(c.tier)}</span></td>
+            <td class="py-2 px-3 text-cyan-300">${Math.max(c.watch_score || 0, c.last_composite || 0).toFixed(3)}</td>
+            <td class="py-2 px-3 text-slate-300">${esc(c.observations)}</td>
+            <td class="py-2 px-3">${c.verified_track_record ? '<span class="text-emerald-400">✓</span>' : '<span class="text-slate-500">✗</span>'}</td>
+            <td class="py-2 px-3">${c.verified_trading_privileges ? '<span class="text-emerald-400">✓</span>' : '<span class="text-slate-500">✗</span>'}</td>
+            <td class="py-2 px-3">${c.is_eligible ? '<span class="text-emerald-400">✓</span>' : '<span class="text-slate-500">✗</span>'}</td>
+            <td class="py-2 px-3 text-center whitespace-nowrap">
+              <button onclick="toggleLive('${esc(c.id)}')" class="btn ${live ? 'bg-slate-800 text-slate-300' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'} !py-0.5 !text-[10px]">${live ? 'Demote' : 'Promote'}</button>
+              <button onclick="removeLeader('${esc(c.id)}')" class="btn bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 !py-0.5 !text-[10px]">Remove</button>
+            </td>
+          </tr>`;
+        }).join('');
+      } catch (e) { toast('Roster load failed: ' + e.message, 'err'); }
+    }
+
+    async function addLeader() {
+      const id = $('leaderAddId').value.trim();
+      if (!id) { toast('Enter a Myfxbook ID', 'err'); return; }
+      try {
+        const r = await api('POST', '/api/ops/leaders/add', { id, name: $('leaderAddName').value.trim(), url: $('leaderAddUrl').value.trim() });
+        toast(r.added ? `Added ${id}` : `${id} already present`, r.added ? 'ok' : 'info');
+        $('leaderAddId').value = ''; $('leaderAddName').value = ''; $('leaderAddUrl').value = '';
+        loadRoster();
+      } catch (e) { toast('Add failed: ' + e.message, 'err'); }
+    }
+
+    async function removeLeader(id) {
+      try { await api('POST', '/api/ops/leaders/remove', { id }); toast(`Removed ${id}`, 'ok'); loadRoster(); }
+      catch (e) { toast('Remove failed: ' + e.message, 'err'); }
+    }
+
+    async function toggleLive(id) {
+      const next = new Set(state.liveIds);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try {
+        const r = await api('POST', '/api/ops/leaders/live', { ids: Array.from(next) });
+        state.liveIds = new Set(r.live || []);
+        toast(next.has(id) ? `${id} promoted to live` : `${id} demoted to watch`, 'ok');
+        loadRoster();
+      } catch (e) { toast('Update failed: ' + e.message, 'err'); }
+    }
+
+    async function checkLeader() {
+      const id = $('leaderAddId').value.trim();
+      if (!id) { toast('Enter a Myfxbook ID to check', 'err'); return; }
+      try {
+        const s = await api('GET', `/api/ops/leaders/check/${encodeURIComponent(id)}`);
+        const box = $('leaderCheckResult');
+        box.classList.remove('hidden');
+        box.innerHTML = `<div class="flex flex-wrap gap-3">
+          <span class="text-slate-400">Name: <span class="text-white">${esc(s.name) || '—'}</span></span>
+          <span class="text-slate-400">Gain: <span class="text-emerald-400 num">${(s.gain_pct || 0).toFixed(2)}%</span></span>
+          <span class="text-slate-400">Drawdown: <span class="text-rose-400 num">${(s.drawdown_pct || 0).toFixed(2)}%</span></span>
+          <span class="text-slate-400">Trades: <span class="text-white num">${esc(s.trades)}</span></span>
+          <span class="text-slate-400">Track rec: <span class="${s.verified_track_record ? 'text-emerald-400' : 'text-slate-500'}">${s.verified_track_record ? '✓' : '✗'}</span></span>
+          <span class="text-slate-400">Privileges: <span class="${s.verified_trading_privileges ? 'text-emerald-400' : 'text-slate-500'}">${s.verified_trading_privileges ? '✓' : '✗'}</span></span>
+        </div>`;
+      } catch (e) { toast('Check failed: ' + e.message, 'err'); }
+    }
+
+    // ------------------------------------------------------------------ logs
+    async function loadLogs() {
+      try {
+        const [audit, risk] = await Promise.all([api('GET', '/api/ops/audit?limit=200'), api('GET', '/api/ops/risk-events?limit=200')]);
+        const ab = $('auditTableBody');
+        ab.innerHTML = audit.length ? audit.map(a => `<tr class="hover:bg-subtle/50">
+          <td class="py-2 px-3 text-slate-400 text-[11px]">${esc(timeStr(a.timestamp))}</td>
+          <td class="py-2 px-3 text-slate-300">${esc(a.component)}</td>
+          <td class="py-2 px-3 text-cyan-300">${esc(a.event)}</td>
+          <td class="py-2 px-3 text-slate-400 text-[11px] truncate max-w-xs">${esc(JSON.stringify(a.detail))}</td>
+        </tr>`).join('') : `<tr><td colspan="4" class="py-6 text-center text-slate-500 font-sans">No audit entries.</td></tr>`;
+        const rb = $('riskEventsTableBody');
+        rb.innerHTML = risk.length ? risk.map(e => {
+          const sev = e.severity === 'CRITICAL' ? 'text-rose-400' : (e.severity === 'WARNING' ? 'text-amber-400' : 'text-slate-300');
+          return `<tr class="hover:bg-subtle/50">
+            <td class="py-2 px-3 text-slate-400 text-[11px]">${esc(timeStr(e.timestamp))}</td>
+            <td class="py-2 px-3 text-slate-200">${esc(e.event)}</td>
+            <td class="py-2 px-3 ${sev}">${esc(e.severity)}</td>
+            <td class="py-2 px-3 text-slate-300">${esc(e.action)}</td>
+            <td class="py-2 px-3 text-slate-400 text-[11px] truncate max-w-xs">${esc(JSON.stringify(e.detail))}</td>
+          </tr>`;
+        }).join('') : `<tr><td colspan="5" class="py-6 text-center text-slate-500 font-sans">No risk events.</td></tr>`;
+      } catch (e) { toast('Logs load failed: ' + e.message, 'err'); }
+    }
+
+    // ------------------------------------------------------------------ config
+    async function loadConfig() {
+      try {
+        const c = await api('GET', '/api/ops/config');
+        $('cfgTradingMode').value = c.trading_mode;
+        const prof = $('cfgProfile');
+        prof.innerHTML = (c.profiles || []).map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+        prof.value = c.active_prop_profile;
+        $('cfgDriver').value = c.execution_driver;
+        $('cfgSymbol').value = c.market_symbol;
+        $('cfgTimeframe').value = c.market_timeframe;
+        $('cfgThreshold').value = c.meta_model_prob_threshold;
+        $('cfgMinLeaderScore').value = c.min_leader_score;
+        $('cfgMaxLive').value = c.max_live_leaders;
+        $('cfgMaxWatch').value = c.max_watch_leaders;
+        $('cfgPoolSize').value = c.live_leader_pool_size;
+        $('cfgPollInterval').value = c.myfxbook_poll_interval_seconds;
+        $('cfgDbUrl').innerText = c.effective_db_url || '—';
+        const it = c.integrations || {};
+        const pill = (label, ok) => `<span class="px-2 py-0.5 rounded border ${ok ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-borderSubtle'}">${esc(label)}: ${ok ? 'configured' : 'off'}</span>`;
+        $('configIntegrations').innerHTML = pill('Myfxbook', it.myfxbook) + pill('MetaAPI', it.metaapi) + pill('EA key', it.ea_key) + pill('MT5', it.mt5);
+      } catch (e) { toast('Config load failed: ' + e.message, 'err'); }
+    }
+
+    async function saveConfig() {
+      const msg = $('configMsg');
+      msg.innerText = '';
+      const payload = {
+        trading_mode: $('cfgTradingMode').value,
+        active_prop_profile: $('cfgProfile').value,
+        execution_driver: $('cfgDriver').value,
+        market_symbol: $('cfgSymbol').value.trim().toUpperCase(),
+        market_timeframe: $('cfgTimeframe').value,
+        meta_model_prob_threshold: parseFloat($('cfgThreshold').value),
+        min_leader_score: parseFloat($('cfgMinLeaderScore').value),
+        max_live_leaders: parseInt($('cfgMaxLive').value, 10),
+        max_watch_leaders: parseInt($('cfgMaxWatch').value, 10),
+        live_leader_pool_size: parseInt($('cfgPoolSize').value, 10),
+        myfxbook_poll_interval_seconds: parseInt($('cfgPollInterval').value, 10),
+        persist: $('cfgPersist').checked,
+      };
+      try {
+        const r = await api('PUT', '/api/ops/config', payload);
+        msg.innerHTML = `<span class="text-emerald-400">Saved: ${esc(Object.keys(r.changes).join(', '))}${r.persisted ? ' (persisted)' : ''}</span>`;
+        toast('Configuration saved', 'ok');
+        refreshOverview();
+      } catch (e) {
+        msg.innerHTML = `<span class="text-rose-400">${esc(e.message)}</span>`;
+        toast('Save failed: ' + e.message, 'err');
+      }
+    }
+
+    // ------------------------------------------------------------------ model
+    async function loadModel() {
+      try {
+        const m = await api('GET', '/api/ops/model');
+        const rows = (m.artifacts || []).map(a => `<tr><td class="py-1 px-2 text-slate-300">${esc(a.name)}</td><td class="py-1 px-2 text-right text-slate-400 num">${a.size.toLocaleString()} B</td></tr>`).join('');
+        const wf = m.wf_report;
+        let wfHtml = '<span class="text-slate-500">no wf_report.json</span>';
+        if (Array.isArray(wf) && wf.length) {
+          const f = wf[0];
+          wfHtml = `<div class="grid grid-cols-2 gap-2">
+            ${metric('Winner', f.winner || '—')}${metric('Test AUC', (f.test_auc != null ? f.test_auc.toFixed(4) : '—'), (f.test_auc != null && f.test_auc < 0.55 ? 'text-amber-400' : 'text-slate-100'))}
+            ${metric('LogLoss', (f.test_logloss != null ? f.test_logloss.toFixed(4) : '—'))}${metric('Brier', (f.brier_score != null ? f.brier_score.toFixed(4) : '—'))}
+            ${metric('ECE', (f.ece != null ? f.ece.toFixed(4) : '—'))}${metric('n_test', f.n_test != null ? f.n_test : '—')}
+          </div>`;
+        }
+        $('modelInfo').innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-slate-400">Model available:</span>
+            <span class="font-bold ${m.available ? 'text-emerald-400' : 'text-rose-400'}">${m.available}</span>
+            <span class="text-slate-400 ml-auto">Winner: <span class="text-white num">${esc(m.winner) || '—'}</span></span>
+          </div>
+          ${m.warning ? `<div class="p-2.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px]">${esc(m.warning)}</div>` : ''}
+          <div><div class="text-[11px] text-slate-400 uppercase tracking-wider mb-1">Walk-Forward Report</div>${wfHtml}</div>
+          <div><div class="text-[11px] text-slate-400 uppercase tracking-wider mb-1">Artifacts</div>
+            <table class="w-full text-[11px]"><tbody class="num">${rows || '<tr><td class="text-slate-500">none</td></tr>'}</tbody></table></div>
+          <div class="text-[11px] text-slate-500">dir: <span class="num">${esc(m.model_dir)}</span></div>`;
+      } catch (e) { $('modelInfo').innerHTML = `<div class="text-rose-400">${esc(e.message)}</div>`; }
+    }
+
+    async function loadCli() {
+      try {
+        const cli = await api('GET', '/api/ops/cli');
+        $('cliRef').innerHTML = cli.map(c => `<div class="p-2 rounded bg-subtle border border-borderSubtle">
+          <div class="font-semibold text-cyan-300 num">gold-trader ${esc(c.command)}</div>
+          <div class="text-slate-400">${esc(c.description)}</div>
+          ${(c.args && c.args.length) ? `<div class="text-slate-500 num text-[10px] mt-0.5">${esc(c.args.join(' '))}</div>` : ''}
+        </div>`).join('') || '<div class="text-slate-500">No commands.</div>';
+      } catch (e) { $('cliRef').innerHTML = `<div class="text-rose-400">${esc(e.message)}</div>`; }
+    }
+
+    // ------------------------------------------------------------------ manual order
+    function openOrderModal() {
+      $('orderSymbol').value = $('headerSymbolLabel').innerText || 'XAUUSD';
+      $('orderResult').classList.add('hidden');
+      $('orderConfirm').checked = false;
+      $('orderModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+    function closeOrderModal() { $('orderModal').classList.add('hidden'); }
+
+    async function submitOrder() {
+      const box = $('orderResult');
+      box.classList.remove('hidden');
+      if (!$('orderConfirm').checked) { box.className = 'text-xs p-2.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-300'; box.innerText = 'Tick the confirmation box to place the order.'; return; }
+      const body = {
+        side: $('orderSide').value,
+        symbol: $('orderSymbol').value.trim().toUpperCase() || undefined,
+        volume: $('orderVolume').value ? parseFloat($('orderVolume').value) : null,
+        stop_points: $('orderStop').value ? parseFloat($('orderStop').value) : null,
+        take_profit_points: $('orderTp').value ? parseFloat($('orderTp').value) : null,
+        confirm: true,
+      };
+      try {
+        const r = await api('POST', '/api/ops/order', body);
+        if (r.ok) { box.className = 'text-xs p-2.5 rounded border border-emerald-500/40 bg-emerald-500/10 text-emerald-300'; box.innerText = `Filled ${r.volume} lots @ ${r.fill_price || r.entry_price} (order ${r.order_id})`; toast('Order placed', 'ok'); refreshOverview(); loadCandles(); }
+        else if (r.approved === false) { box.className = 'text-xs p-2.5 rounded border border-rose-500/40 bg-rose-500/10 text-rose-300'; box.innerText = `Rejected [${r.reason_code}]: ${r.reason}`; toast('Order rejected by risk engine', 'err'); }
+        else { box.className = 'text-xs p-2.5 rounded border border-rose-500/40 bg-rose-500/10 text-rose-300'; box.innerText = `Not filled: ${r.error || 'unknown'}`; }
+      } catch (e) {
+        box.className = 'text-xs p-2.5 rounded border border-rose-500/40 bg-rose-500/10 text-rose-300'; box.innerText = e.message;
+        toast('Order failed: ' + e.message, 'err');
+      }
+    }
+
+    // ------------------------------------------------------------------ confirm modal
+    function showConfirm(title, desc, confirmText, action, danger = true) {
+      $('modalTitle').innerText = title;
+      $('modalDescription').innerText = desc;
+      $('modalConfirmBtn').innerText = confirmText;
+      $('modalIconContainer').className = `w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${danger ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}`;
+      $('modalConfirmBtn').className = `btn text-white ${danger ? 'bg-rose-600 hover:bg-rose-500' : 'bg-emerald-600 hover:bg-emerald-500'}`;
+      pendingModalAction = action;
+      $('confirmModal').classList.remove('hidden');
+    }
+    function closeConfirmModal() { $('confirmModal').classList.add('hidden'); pendingModalAction = null; }
+    async function confirmAction() { const fn = pendingModalAction; closeConfirmModal(); if (fn) { try { await fn(); } catch (e) { toast(e.message, 'err'); } } }
+
+    // ------------------------------------------------------------------ boot
     window.addEventListener('DOMContentLoaded', () => {
+      document.querySelector('.tfbtn[data-tf="M15"]').className = 'tfbtn px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-bold';
       initChart();
       loadCandles();
-      fetchOverview();
-      loadHistoryDeals();
-      loadSignalsLog();
-
-      setInterval(fetchOverview, 2000);
+      refreshOverview();
+      switchTableTab('positions');
+      setInterval(refreshOverview, 3000);
       setInterval(loadCandles, 10000);
+      if (window.location.hash) showSection(window.location.hash.slice(1).replace('view-', '') || 'desk');
     });
   </script>
 </body>

@@ -97,7 +97,8 @@ app/
 │   ├── routes_leaders.py  # Leader roster, scores, active watchlists
 │   ├── routes_risk.py     # Risk governor state, drawdown metrics, kill switch toggle
 │   ├── routes_signals.py  # Generated signals and strategy logs
-│   └── routes_modes.py    # Mode-aware switches and prop profile status
+│   ├── routes_modes.py    # Mode-aware switches and prop profile status
+│   └── routes_ops.py      # Control plane: backtest, walk-forward, ablation, replay
 ├── db/                    # Asynchronous SQLAlchemy database models & migrations
 │   ├── base.py            # Declarative base & async engine setup
 │   ├── models.py          # Tables: Candle, Signal, Order, Trade, Leader, RiskEvent
@@ -109,6 +110,7 @@ app/
 ├── features/              # Feature engineering
 │   ├── indicators.py      # Vectorized TA indicators (RSI, ATR, Bollinger, MACD)
 │   ├── generator.py       # Point-in-time feature matrix assembler
+│   ├── timeframe.py       # TimeframeProfile: per-tf horizon/label/stop params (M1,M5,M15,M30,H1)
 │   └── transforms.py      # Stationarity transformations (log returns, z-scores)
 ├── leaders/               # Human alpha & copy-trading
 │   ├── myfxbook.py        # Myfxbook REST client (authentication, accounts, trades)
@@ -139,8 +141,9 @@ app/
 │   └── kill_switch.py     # Hard emergency liquidation & trading lock
 └── backtest/              # Simulation & validation suite
     ├── runner.py          # Event-driven backtesting engine
-    ├── walk_forward.py    # Expanding/rolling out-of-sample cross-validation
+    ├── walkforward.py     # Expanding/rolling out-of-sample cross-validation
     ├── replay.py          # Bar-by-bar historical replay through live pipeline
+    ├── ablation.py        # 6-way component ablation across train/val/test
     └── leakage.py         # Automated data snooping & future leakage detection
 ```
 

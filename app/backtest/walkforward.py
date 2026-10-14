@@ -139,10 +139,11 @@ def time_slices(df: pd.DataFrame, train_end: str, val_end: str, test_end: str) -
 
 
 def run_fold(name, ohlcv_train, ohlcv_val, ohlcv_test, cot=None,
-             horizon_bars: int = 16, out_dir: Path | None = None) -> FoldResult:
-    train_df = build_training_data(ohlcv_train, cot, horizon_bars)
-    val_df = build_training_data(ohlcv_val, cot, horizon_bars)
-    test_df = build_training_data(ohlcv_test, cot, horizon_bars)
+             horizon_bars: int = 16, min_move_pct: float = 0.05,
+             threshold: float = 0.0005, out_dir: Path | None = None) -> FoldResult:
+    train_df = build_training_data(ohlcv_train, cot, horizon_bars, min_move_pct, threshold)
+    val_df = build_training_data(ohlcv_val, cot, horizon_bars, min_move_pct, threshold)
+    test_df = build_training_data(ohlcv_test, cot, horizon_bars, min_move_pct, threshold)
 
     X_train = train_df[[c for c in train_df.columns if c != "label"]]
     y_train = train_df["label"]
@@ -193,10 +194,14 @@ def run_fold(name, ohlcv_train, ohlcv_val, ohlcv_test, cot=None,
 
 def walk_forward(ohlcv, cot=None, *, train_end=..., val_end=..., test_end=...,
                  horizon_bars: int = 16,
+                 min_move_pct: float = 0.05,
+                 threshold: float = 0.0005,
+                 fold_name: str = "wf_main",
                  out_dir: Path | None = None) -> list[FoldResult]:
     slices = time_slices(ohlcv, train_end, val_end, test_end)
-    fold = run_fold("wf_main", slices["train"], slices["validation"], slices["test"], cot,
-                    horizon_bars=horizon_bars, out_dir=out_dir)
+    fold = run_fold(fold_name, slices["train"], slices["validation"], slices["test"], cot,
+                    horizon_bars=horizon_bars, min_move_pct=min_move_pct,
+                    threshold=threshold, out_dir=out_dir)
     return [fold]
 
 

@@ -134,12 +134,19 @@ def build_feature_row(
     return out
 
 
-def label_trades(df: pd.DataFrame, horizon_bars: int = 16, side: str = "buy") -> pd.Series:
+def label_trades(
+    df: pd.DataFrame,
+    horizon_bars: int = 16,
+    side: str = "buy",
+    threshold: float = 0.0005,
+) -> pd.Series:
     """Label whether a directional trade was profitable after ``horizon_bars``.
 
-    Threshold 0.0005 (~$1.35 on XAUUSD at $2700) is realistic for a 4-hour
-    M15 trade with a 5-point ATR stop.  The old 0.001 threshold produced only
-    2.4% positive examples on the synthetic 2020–2023 bars.
+    ``threshold`` is the fractional move that counts as a win. The default
+    0.0005 (~$1.35 on XAUUSD at $2700) is realistic for a 4-hour M15 trade with
+    a 5-point ATR stop. Shorter timeframes need a smaller threshold; see
+    :mod:`app.features.timeframe`. The threshold must clear the round-trip
+    transaction cost, otherwise positives are untradeable.
     """
     if len(df) <= horizon_bars:
         return pd.Series(np.nan, index=df.index)
@@ -147,8 +154,8 @@ def label_trades(df: pd.DataFrame, horizon_bars: int = 16, side: str = "buy") ->
     future = close.shift(-horizon_bars)
     ret = (future - close) / close
     if side == "buy":
-        label = (ret > 0.0005).astype(float)
+        label = (ret > threshold).astype(float)
     else:
-        label = (ret < -0.0005).astype(float)
+        label = (ret < -threshold).astype(float)
     label.iloc[-horizon_bars:] = np.nan
     return label
