@@ -71,7 +71,7 @@ async def leader_scores(leader_id: str, session: AsyncSession = Depends(_session
     stmt = (
         select(LeaderDailyScore)
         .where(LeaderDailyScore.leader_id == leader_id)
-        .order_by(LeaderDailyScore.day.desc())
+        .order_by(LeaderDailyScore.date.desc())
         .limit(30)
     )
     rows = (await session.execute(stmt)).scalars().all()
