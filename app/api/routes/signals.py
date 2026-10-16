@@ -10,6 +10,7 @@ from ...db.base import Database
 from ...db.models import SignalDecision, SignalStatus, TradeEvent
 from ...features.build_features import build_feature_row
 from ...strategy.engine import LeaderScore
+from ..security import require_ops_auth
 
 router = APIRouter(prefix="/api/signals", tags=["signals"])
 
@@ -41,7 +42,7 @@ async def list_signals(limit: int = 50, session: AsyncSession = Depends(_session
     ]
 
 
-@router.post("/{signal_id}/re-evaluate")
+@router.post("/{signal_id}/re-evaluate", dependencies=[Depends(require_ops_auth)])
 async def re_evaluate(signal_id: str, request: Request, session: AsyncSession = Depends(_session)):
     """Re-run the hybrid gate on a stored decision's underlying trade event.
 

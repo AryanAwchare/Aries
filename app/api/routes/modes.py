@@ -4,11 +4,12 @@ one place that may *request* a switch, and it still validates.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from ...config import BASE_DIR, TradingMode
 from ...risk.prop_profiles import load_profile, load_profile_dir
+from ..security import require_ops_auth
 
 router = APIRouter(prefix="/api/modes", tags=["modes"])
 
@@ -24,7 +25,7 @@ async def get_mode(request: Request):
     return {"trading_mode": request.app.state.settings.trading_mode.value}
 
 
-@router.put("")
+@router.put("", dependencies=[Depends(require_ops_auth)])
 async def set_mode(payload: ModePayload, request: Request):
     mode = payload.mode
     if mode not in _ALLOWED:

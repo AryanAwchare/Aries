@@ -25,6 +25,7 @@ from ...forecast.kronos import KronosForecaster
 from ...logging import get_logger
 from ...metamodel.predict import MetaModelPredictor
 from ...risk.news_filter import NewsFilter
+from ..security import require_ops_auth
 
 log = get_logger(__name__)
 
@@ -444,7 +445,7 @@ async def get_signals_log(limit: int = 30, session: AsyncSession = Depends(_sess
     ]
 
 
-@router.post("/scan")
+@router.post("/scan", dependencies=[Depends(require_ops_auth)])
 async def trigger_ai_scan(request: Request, session: AsyncSession = Depends(_session)):
     """Runs a manual multi-agent market scan on current gold price, recording the decision."""
     settings = request.app.state.settings
@@ -521,7 +522,7 @@ async def get_history(days: int = Query(30, ge=1, le=90)):
     return {"count": len(deals), "deals": deals}
 
 
-@router.post("/close-position")
+@router.post("/close-position", dependencies=[Depends(require_ops_auth)])
 async def close_position(payload: ClosePositionRequest):
     """Close an open MT5 trade position by ticket."""
     result = await asyncio.to_thread(_close_position_sync, payload.ticket)

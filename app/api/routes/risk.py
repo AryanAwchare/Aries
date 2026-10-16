@@ -10,6 +10,7 @@ from ...config import BASE_DIR
 from ...db import audit
 from ...db.base import Database
 from ...risk.prop_profiles import load_profile, load_profile_dir
+from ..security import require_ops_auth
 
 router = APIRouter(prefix="/api/risk", tags=["risk"])
 
@@ -57,7 +58,7 @@ async def get_killswitch():
     return {"enabled": ks.enabled}
 
 
-@router.put("/killswitch")
+@router.put("/killswitch", dependencies=[Depends(require_ops_auth)])
 async def set_killswitch(payload: KillSwitchPayload, request: Request, session: AsyncSession = Depends(_session)):
     ks = services.get_kill_switch()
     enabled = payload.enabled
@@ -73,7 +74,7 @@ async def set_killswitch(payload: KillSwitchPayload, request: Request, session: 
     return {"enabled": ks.enabled}
 
 
-@router.put("/copy-trading/off")
+@router.put("/copy-trading/off", dependencies=[Depends(require_ops_auth)])
 async def copy_trading_off(request: Request, session: AsyncSession = Depends(_session)):
     """Single-click, immediate, no-confirmation OFF."""
     toggle = services.get_copy_trading_toggle()
@@ -83,7 +84,7 @@ async def copy_trading_off(request: Request, session: AsyncSession = Depends(_se
     return {"copy_trading_enabled": toggle.enabled}
 
 
-@router.post("/copy-trading/on")
+@router.post("/copy-trading/on", dependencies=[Depends(require_ops_auth)])
 async def copy_trading_on(request: Request, session: AsyncSession = Depends(_session)):
     """Step 1 of 2 — request enabling. Returns a one-time confirmation token,
     or null if the active profile forbids copy-trading."""
@@ -99,7 +100,7 @@ async def copy_trading_on(request: Request, session: AsyncSession = Depends(_ses
     return {"confirmation_token": token, "profile_copy_trading_allowed": profile.copy_trading_allowed}
 
 
-@router.put("/copy-trading/on")
+@router.put("/copy-trading/on", dependencies=[Depends(require_ops_auth)])
 async def copy_trading_on_confirm(
     confirmation_token: str, request: Request, session: AsyncSession = Depends(_session)
 ):

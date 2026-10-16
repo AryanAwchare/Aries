@@ -52,6 +52,12 @@ class Settings(BaseSettings):
     ea_api_key: str = ""
     ea_order_timeout_seconds: int = 60
 
+    # --- Control plane ----------------------------------------------------
+    # When set, mutating control-plane endpoints require this key
+    # (X-API-Key header or Authorization: Bearer). Empty = unauthenticated
+    # (local single-user mode); the app logs a CRITICAL warning at startup.
+    ops_api_key: str = ""
+
     # --- Myfxbook ---------------------------------------------------------
     myfxbook_email: str = ""
     myfxbook_password: str = ""

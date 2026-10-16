@@ -17,7 +17,7 @@ from sqlalchemy import select
 
 from app.config import Settings
 from app.db.base import Database
-from app.db.models import EaOrder, TradeSide
+from app.db.models import EaOrder, OrderRecord, SystemEvent, TradeSide
 from app.execution.base import OrderRequest, OrderResult, PaperBroker
 from app.execution.reconciliation import (
     BrokerPosition,
@@ -296,3 +296,47 @@ def test_position_reconciler_detects_ghosts_and_orphans():
     mismatch_types = {m.mismatch_type for m in result.mismatches}
     assert "ghost_position" in mismatch_types
     assert "orphan_position" in mismatch_types
+
+
+async def test_reconcile_with_db_persists_audit_on_mismatch(tmp_path):
+    """Regression: the DB-backed path builds a SystemEvent via record_audit.
+
+    Previously it did ``AuditLogEntry(ts=..., actor=..., action=...)`` whose
+    attributes are read-only properties -> AttributeError exactly when a
+    mismatch needed to be logged.
+    """
+    db_path = tmp_path / "recon.db"
+    settings = Settings(database_url=f"sqlite+aiosqlite:///{db_path}")
+    db = Database(settings)
+    await db.create_all()
+
+    async with db.session_factory() as session:
+        session.add(
+            OrderRecord(
+                broker_order_id="ticket-ghost",
+                symbol="XAUUSD",
+                direction=TradeSide.BUY,
+                volume=0.5,
+                entry=2000.0,
+                status="filled",
+            )
+        )
+        await session.commit()
+
+    reconciler = PositionReconciler()
+    # Broker reports no open positions -> the internal order is a ghost.
+    async with db.session_factory() as session:
+        result = await reconciler.reconcile_with_db(session, broker_positions=[])
+
+    assert result.is_clean is False
+    assert any(m.mismatch_type == "ghost_position" for m in result.mismatches)
+
+    async with db.session_factory() as session:
+        rows = (await session.execute(select(SystemEvent))).scalars().all()
+
+    assert len(rows) == 1
+    assert rows[0].component == "reconciler"
+    assert rows[0].event == "reconciliation.mismatch"
+    assert rows[0].detail["mismatches"][0]["type"] == "ghost_position"
+
+    await db.dispose()

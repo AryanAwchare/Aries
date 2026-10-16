@@ -27,6 +27,15 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.settings = settings
 
+    if settings.ops_api_key:
+        log.info("Control-plane API key configured: mutating endpoints require OPS_API_KEY")
+    else:
+        log.critical(
+            "OPS_API_KEY is not set: mutating control-plane endpoints (order, config, "
+            "leaders, kill switch, copy-trading) are UNAUTHENTICATED. Set OPS_API_KEY "
+            "before exposing the API beyond localhost."
+        )
+
     db = services.get_db()
     await db.create_all()
     app.state.db = db

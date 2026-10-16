@@ -47,6 +47,7 @@ from .dashboard import (
     _get_mt5_candles_sync,
     _get_mt5_positions_sync,
 )
+from ..security import require_ops_auth
 
 log = get_logger(__name__)
 
@@ -445,7 +446,7 @@ class JobStartPayload(BaseModel):
     params: dict = Field(default_factory=dict)
 
 
-@router.post("/jobs/{kind}")
+@router.post("/jobs/{kind}", dependencies=[Depends(require_ops_auth)])
 async def start_job(kind: str, payload: JobStartPayload | None = None, request: Request = None):
     if kind not in _JOB_FUNCS:
         raise HTTPException(404, f"unknown job kind; allowed: {sorted(_JOB_FUNCS)}")
@@ -515,7 +516,7 @@ async def get_config(request: Request):
     }
 
 
-@router.put("/config")
+@router.put("/config", dependencies=[Depends(require_ops_auth)])
 async def update_config(payload: ConfigPayload, request: Request, session: AsyncSession = Depends(_session)):
     settings: Settings = request.app.state.settings
     changes: dict[str, Any] = {}
@@ -672,7 +673,7 @@ async def leaders_roster_full(request: Request):
     }
 
 
-@router.post("/leaders/add")
+@router.post("/leaders/add", dependencies=[Depends(require_ops_auth)])
 async def leaders_add(payload: LeaderAddPayload, request: Request, session: AsyncSession = Depends(_session)):
     settings: Settings = request.app.state.settings
     roster = _roster_for(settings)
@@ -685,7 +686,7 @@ async def leaders_add(payload: LeaderAddPayload, request: Request, session: Asyn
     return {"ok": True, "added": added, "live": roster.live_ids(), "watch": roster.watch_ids()}
 
 
-@router.post("/leaders/remove")
+@router.post("/leaders/remove", dependencies=[Depends(require_ops_auth)])
 async def leaders_remove(payload: LeaderIdPayload, request: Request, session: AsyncSession = Depends(_session)):
     settings: Settings = request.app.state.settings
     roster = _roster_for(settings)
@@ -698,7 +699,7 @@ async def leaders_remove(payload: LeaderIdPayload, request: Request, session: As
     return {"ok": True, "removed": removed, "live": roster.live_ids(), "watch": roster.watch_ids()}
 
 
-@router.post("/leaders/live")
+@router.post("/leaders/live", dependencies=[Depends(require_ops_auth)])
 async def leaders_set_live(payload: LeaderLivePayload, request: Request, session: AsyncSession = Depends(_session)):
     settings: Settings = request.app.state.settings
     roster = _roster_for(settings)
@@ -808,7 +809,7 @@ async def get_cli_reference():
     return _CLI_REFERENCE
 
 
-@router.post("/setup-db")
+@router.post("/setup-db", dependencies=[Depends(require_ops_auth)])
 async def setup_db(request: Request, session: AsyncSession = Depends(_session)):
     db: Database = request.app.state.db
     await db.create_all()
@@ -827,7 +828,7 @@ class ManualOrderPayload(BaseModel):
     confirm: bool = False
 
 
-@router.post("/order")
+@router.post("/order", dependencies=[Depends(require_ops_auth)])
 async def place_manual_order(payload: ManualOrderPayload, request: Request):
     if not payload.confirm:
         raise HTTPException(422, "confirmation required: set confirm=true to place a manual order")

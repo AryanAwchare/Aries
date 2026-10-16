@@ -16,7 +16,8 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..db.models import AuditLogEntry, OrderRecord
+from ..db.audit import record_audit
+from ..db.models import OrderRecord
 from ..logging import get_logger
 
 log = get_logger(__name__)
@@ -176,18 +177,15 @@ class PositionReconciler:
         ]
         result = self.reconcile(internal_positions, broker_positions)
         if not result.is_clean:
-            session.add(
-                AuditLogEntry(
-                    ts=datetime.now(timezone.utc),
-                    actor="reconciler",
-                    action="reconciliation.mismatch",
-                    detail={
-                        "mismatches": [
-                            {"type": m.mismatch_type, "ticket": m.ticket, "order_id": m.order_id, "detail": m.details}
-                            for m in result.mismatches
-                        ]
-                    },
-                )
+            await record_audit(
+                session,
+                actor="reconciler",
+                action="reconciliation.mismatch",
+                detail={
+                    "mismatches": [
+                        {"type": m.mismatch_type, "ticket": m.ticket, "order_id": m.order_id, "detail": m.details}
+                        for m in result.mismatches
+                    ]
+                },
             )
-            await session.commit()
         return result
