@@ -292,6 +292,45 @@ async def _load_ohlcv(settings, args, timeframe: str | None = None):
     return df
 
 
+def cmd_fetch_ticks(args) -> None:
+    from datetime import datetime, timezone
+
+    from .config import get_settings
+    from .data.ticks import (
+        fetch_ticks_mt5,
+        save_ticks,
+        tick_coverage,
+        tick_microstructure_features,
+        ticks_to_bars,
+    )
+
+    settings = get_settings()
+    symbol = (args.symbol or settings.market_symbol).upper()
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(hours=args.hours)
+    print(f"fetching {symbol} ticks {start:%Y-%m-%d %H:%M} .. {end:%Y-%m-%d %H:%M} UTC")
+    ticks = fetch_ticks_mt5(symbol, start, end, terminal_path=args.terminal)
+    cov = tick_coverage(ticks, symbol)
+    print(f"ticks: {cov.ticks}")
+    if ticks.empty:
+        print("no ticks returned (is the MT5 terminal running and logged in?)")
+        return
+
+    raw_dir = BASE_DIR / "data" / "raw"
+    tick_path = raw_dir / f"{symbol}_ticks_{start:%Y%m%d}.csv"
+    save_ticks(ticks, tick_path)
+    print(f"saved ticks -> {tick_path}")
+
+    bars = ticks_to_bars(ticks, args.timeframe)
+    feat = tick_microstructure_features(bars, window=50)
+    bars_path = raw_dir / f"{symbol}_{args.timeframe}_from_ticks.csv"
+    feat.reset_index().to_csv(bars_path, index=False)
+    print(f"aggregated {len(feat)} {args.timeframe} bars -> {bars_path}")
+    cols = [c for c in ["ofi", "vpin", "spread_pct", "kyle_lambda"] if c in feat]
+    if cols:
+        print(feat[cols].describe().to_string())
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="gold-trader")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -314,6 +353,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--id", help="account id for add-check")
     sp.add_argument("--seeds", help="comma-separated candidate ids to screen (added to the seed file)")
     sp.add_argument("--rotate", action="store_true", help="rotate the live tier after discovery")
+
+    sp = sub.add_parser("fetch-ticks", help="download real tick data from the local MetaTrader 5 terminal")
+    sp.add_argument("--symbol", default=None, help="symbol (default: market_symbol)")
+    sp.add_argument("--hours", type=float, default=24.0, help="lookback window in hours")
+    sp.add_argument("--timeframe", default="M1", help="aggregate ticks to this bar size")
+    sp.add_argument("--terminal", default=None, help="path to terminal64.exe (default: auto)")
 
     sp = sub.add_parser("backtest", help="run the hybrid-signal backtest")
     sp.add_argument("--synthetic", action="store_true", help="use deterministic synthetic data")
@@ -351,6 +396,8 @@ def main() -> None:
         asyncio.run(cmd_poll_once(args))
     elif args.command == "scan-leaders":
         asyncio.run(cmd_scan_leaders(args))
+    elif args.command == "fetch-ticks":
+        cmd_fetch_ticks(args)
     elif args.command == "backtest":
         asyncio.run(cmd_backtest(args))
     elif args.command == "ablation":
