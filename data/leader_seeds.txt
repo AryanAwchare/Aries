@@ -1,0 +1,20 @@
+# Myfxbook candidate seed list for Phase 2.1 discovery.
+# One account id per line. Optional ", name" after the id is ignored by the
+# loader (kept for humans). Lines starting with '#' are comments.
+#
+# These ids come from links of the form
+#   https://www.myfxbook.com/members/<user>/<slug>/<accountId>
+# and are screened by `scan-leaders discover` before entering the watch tier.
+#
+# --- user-supplied gold leaders (watch tier seed) ---
+10515575, Gold Trade Pro (strueli)
+12106293, Happy Gold-OxS (scalping)
+10740968, Golden Buffalo (grid risk)
+11340280, SuperGoldBot (tail-risk)
+12076857, SONIC AI (low return)
+#
+# --- unverified candidates (screened, expected to mostly fail) ---
+11828988
+11572408, grid/martingale suspect
+11931961
+11931918

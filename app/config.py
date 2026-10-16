@@ -10,7 +10,7 @@ import os
 from enum import Enum
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -65,6 +65,14 @@ class Settings(BaseSettings):
     live_leader_pool_size: int = 5
     leader_min_observations: int = 3
     leader_rescore_interval_hours: int = 4
+
+    # --- Leader discovery (Phase 2.1 gold screening) -----------------------
+    leader_min_profit_factor: float = 1.5
+    leader_max_drawdown_pct: float = 20.0
+    leader_min_account_age_days: int = 365
+    leader_min_discovery_trades: int = 200
+    leader_require_real_account: bool = True
+    leader_seed_file: str = "data/leader_seeds.txt"
 
     # --- Leader Eligibility & Scoring (Phase 3) ---------------------------
     min_account_age_days: int = 180
@@ -165,6 +173,11 @@ class Settings(BaseSettings):
     @property
     def roster_path(self) -> Path:
         p = Path(self.leader_roster_path)
+        return p if p.is_absolute() else BASE_DIR / p
+
+    @property
+    def leader_seed_path(self) -> Path:
+        p = Path(self.leader_seed_file)
         return p if p.is_absolute() else BASE_DIR / p
 
     def ensure_dirs(self) -> None:

@@ -12,10 +12,9 @@ python -m app.cli replay --synthetic
 """
 from __future__ import annotations
 
-import asyncio
 import argparse
+import asyncio
 from datetime import timedelta
-from pathlib import Path
 
 from .config import BASE_DIR, get_settings
 from .logging import setup_logging
@@ -236,6 +235,29 @@ async def cmd_scan_leaders(args) -> None:
               f"gain={stats.gain_pct:.2f}%  dd={stats.drawdown_pct:.2f}%  trades={stats.trades}")
         print("run `scan-leaders --add <id>` to put it on the watch tier")
 
+    elif args.action == "discover":
+        from .leaders.screening import discover_leaders
+
+        seeds = [s.strip() for s in (args.seeds or "").split(",") if s.strip()]
+        result = await discover_leaders(
+            settings, client, roster, seed_ids=seeds, apply=args.apply, rotate=args.rotate
+        )
+        print(f"screened {result['candidates']} candidates -> "
+              f"{len(result['qualified'])} qualified"
+              + ("" if result["applied"] else "  (dry run; pass --apply to persist)"))
+        for row in sorted(result["results"], key=lambda r: r["composite"], reverse=True):
+            flag = "OK " if row["qualified"] else "no "
+            reason = "" if row["qualified"] else f"  [{','.join(row['reasons'])}]"
+            print(f"  {flag}{row['id']:<14} score={row['composite']:.3f} "
+                  f"{row['strategy']:<14} pf={row['metrics'].get('profit_factor')} "
+                  f"dd={row['metrics'].get('drawdown_pct')}%{reason}")
+        if result["rotation"] is not None:
+            print(f"rotation: promoted={result['rotation']['promoted']} "
+                  f"demoted={result['rotation']['demoted']}")
+            print(result["rotation"]["note"])
+        if result["applied"]:
+            _print_roster(settings, roster)
+
 
 def _print_roster(settings, roster) -> None:
     rows = sorted(roster.all_ids(), key=lambda i: (roster.get(i).watch_score, roster.get(i).observations), reverse=True)
@@ -251,6 +273,7 @@ def _print_roster(settings, roster) -> None:
 
 async def _load_ohlcv(settings, args, timeframe: str | None = None):
     from datetime import datetime, timezone
+
     from .data.ohlcv import CSVProvider, OHLCVRequest, SyntheticProvider
 
     end = datetime.now(timezone.utc)
@@ -279,8 +302,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--once", action="store_true")
 
     sp = sub.add_parser("scan-leaders", help="discover, rank and rotate leaders (two-tier)")
-    sp.add_argument("action", nargs="?", default="scan", choices=["scan", "list", "add-check"],
-                    help="scan=rank the watch list (default), list=show roster, add-check=verify one id")
+    sp.add_argument("action", nargs="?", default="scan", choices=["scan", "list", "add-check", "discover"],
+                    help="scan=rank the watch list (default), discover=screen candidates, "
+                         "list=show roster, add-check=verify one id")
     sp.add_argument("--apply", action="store_true", help="persist the rotation (default: dry run)")
     sp.add_argument("--add", help="add a candidate account id to the watch tier")
     sp.add_argument("--name", help="name for --add")
@@ -288,6 +312,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--remove", help="remove an account id from the roster")
     sp.add_argument("--live", help="comma-separated ids to force as the live tier")
     sp.add_argument("--id", help="account id for add-check")
+    sp.add_argument("--seeds", help="comma-separated candidate ids to screen (added to the seed file)")
+    sp.add_argument("--rotate", action="store_true", help="rotate the live tier after discovery")
 
     sp = sub.add_parser("backtest", help="run the hybrid-signal backtest")
     sp.add_argument("--synthetic", action="store_true", help="use deterministic synthetic data")
