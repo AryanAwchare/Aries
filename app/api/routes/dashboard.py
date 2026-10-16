@@ -37,13 +37,8 @@ _meta_predictor = MetaModelPredictor(BASE_DIR / "data" / "models" / "wf_main")
 _news_filter = NewsFilter()
 _macro_provider = MacroProvider()
 
-# Try importing MetaTrader5 safely
-try:
-    import MetaTrader5 as mt5
-    MT5_AVAILABLE = True
-except ImportError:
-    mt5 = None
-    MT5_AVAILABLE = False
+# Direct MT5 access is centralised in app.data.mt5_client (initialize + shutdown).
+from ...data.mt5_client import MT5_AVAILABLE, session as _mt5_session
 
 
 async def _session(request: Request) -> AsyncSession:
@@ -56,15 +51,13 @@ def _get_mt5_account_sync() -> Dict[str, Any]:
     """Synchronous MT5 account query helper."""
     if not MT5_AVAILABLE:
         return {"connected": False, "error": "MetaTrader5 library not installed"}
-    
+
     try:
-        if not mt5.initialize():
-            return {"connected": False, "error": f"MT5 initialize failed: {mt5.last_error()}"}
-        
-        acc = mt5.account_info()
+        with _mt5_session() as mt5:
+            acc = mt5.account_info()
         if acc is None:
             return {"connected": False, "error": "MT5 account info unavailable"}
-        
+
         return {
             "connected": True,
             "login": acc.login,
@@ -90,15 +83,13 @@ def _get_mt5_positions_sync(symbol: Optional[str] = None) -> List[Dict[str, Any]
     """Synchronous MT5 open positions query."""
     if not MT5_AVAILABLE:
         return []
-    
+
     try:
-        if not mt5.initialize():
-            return []
-        
-        positions = mt5.positions_get(symbol=symbol) if symbol else mt5.positions_get()
+        with _mt5_session() as mt5:
+            positions = mt5.positions_get(symbol=symbol) if symbol else mt5.positions_get()
         if not positions:
             return []
-        
+
         result = []
         for p in positions:
             side_str = "BUY" if p.type == 0 else "SELL"
@@ -126,17 +117,15 @@ def _get_mt5_deals_sync(days: int = 30) -> List[Dict[str, Any]]:
     """Synchronous MT5 closed trade history query."""
     if not MT5_AVAILABLE:
         return []
-    
+
     try:
-        if not mt5.initialize():
-            return []
-        
         now = datetime.now(timezone.utc)
         start = now - timedelta(days=days)
-        deals = mt5.history_deals_get(start, now)
+        with _mt5_session() as mt5:
+            deals = mt5.history_deals_get(start, now)
         if not deals:
             return []
-        
+
         result = []
         for d in reversed(deals):
             deal_type = "BUY" if d.type == 0 else ("SELL" if d.type == 1 else "BALANCE")
@@ -162,33 +151,32 @@ def _get_mt5_deals_sync(days: int = 30) -> List[Dict[str, Any]]:
 
 def _get_mt5_candles_sync(symbol: str = "XAUUSD", timeframe: str = "M15", count: int = 300) -> List[Dict[str, Any]]:
     """Synchronous MT5 candle rates query formatted for Lightweight Charts."""
-    tf_map = {
-        "M1": getattr(mt5, "TIMEFRAME_M1", 1),
-        "M5": getattr(mt5, "TIMEFRAME_M5", 5),
-        "M15": getattr(mt5, "TIMEFRAME_M15", 15),
-        "M30": getattr(mt5, "TIMEFRAME_M30", 30),
-        "H1": getattr(mt5, "TIMEFRAME_H1", 60),
-        "H4": getattr(mt5, "TIMEFRAME_H4", 240),
-        "D1": getattr(mt5, "TIMEFRAME_D1", 1440),
-    }
-    
     if MT5_AVAILABLE:
         try:
-            if mt5.initialize():
+            with _mt5_session() as mt5:
+                tf_map = {
+                    "M1": getattr(mt5, "TIMEFRAME_M1", 1),
+                    "M5": getattr(mt5, "TIMEFRAME_M5", 5),
+                    "M15": getattr(mt5, "TIMEFRAME_M15", 15),
+                    "M30": getattr(mt5, "TIMEFRAME_M30", 30),
+                    "H1": getattr(mt5, "TIMEFRAME_H1", 60),
+                    "H4": getattr(mt5, "TIMEFRAME_H4", 240),
+                    "D1": getattr(mt5, "TIMEFRAME_D1", 1440),
+                }
                 mt5_tf = tf_map.get(timeframe.upper(), getattr(mt5, "TIMEFRAME_M15", 15))
                 rates = mt5.copy_rates_from_pos(symbol, mt5_tf, 0, count)
-                if rates is not None and len(rates) > 0:
-                    candles = []
-                    for r in rates:
-                        candles.append({
-                            "time": int(r[0]),
-                            "open": float(round(r[1], 2)),
-                            "high": float(round(r[2], 2)),
-                            "low": float(round(r[3], 2)),
-                            "close": float(round(r[4], 2)),
-                            "volume": float(r[5]),
-                        })
-                    return candles
+            if rates is not None and len(rates) > 0:
+                candles = []
+                for r in rates:
+                    candles.append({
+                        "time": int(r[0]),
+                        "open": float(round(r[1], 2)),
+                        "high": float(round(r[2], 2)),
+                        "low": float(round(r[3], 2)),
+                        "close": float(round(r[4], 2)),
+                        "volume": float(r[5]),
+                    })
+                return candles
         except Exception as exc:
             log.warning("MT5 copy_rates failed, attempting CSV fallback: %s", exc)
 
@@ -285,48 +273,46 @@ def _close_position_sync(ticket: int) -> Dict[str, Any]:
     """Synchronous MT5 position closer."""
     if not MT5_AVAILABLE:
         return {"ok": False, "error": "MetaTrader5 not available"}
-    
+
     try:
-        if not mt5.initialize():
-            return {"ok": False, "error": f"MT5 init failed: {mt5.last_error()}"}
-        
-        positions = mt5.positions_get(ticket=ticket)
-        if not positions or len(positions) == 0:
-            return {"ok": False, "error": f"Position ticket #{ticket} not found"}
-        
-        pos = positions[0]
-        symbol = pos.symbol
-        tick = mt5.symbol_info_tick(symbol)
-        if tick is None:
-            return {"ok": False, "error": f"Failed to get price tick for {symbol}"}
-        
-        if pos.type == mt5.ORDER_TYPE_BUY:
-            order_type = mt5.ORDER_TYPE_SELL
-            price = tick.bid
-        else:
-            order_type = mt5.ORDER_TYPE_BUY
-            price = tick.ask
-            
-        request = {
-            "action": mt5.TRADE_ACTION_DEAL,
-            "symbol": symbol,
-            "volume": pos.volume,
-            "type": order_type,
-            "position": ticket,
-            "price": price,
-            "deviation": 50,
-            "magic": 0,
-            "comment": "aries dashboard close",
-            "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
-        }
-        
-        result = mt5.order_send(request)
-        if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
-            err = result.comment if result else str(mt5.last_error())
-            return {"ok": False, "error": f"Close failed: {err}"}
-            
-        return {"ok": True, "ticket": ticket, "fill_price": result.price}
+        with _mt5_session() as mt5:
+            positions = mt5.positions_get(ticket=ticket)
+            if not positions or len(positions) == 0:
+                return {"ok": False, "error": f"Position ticket #{ticket} not found"}
+
+            pos = positions[0]
+            symbol = pos.symbol
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None:
+                return {"ok": False, "error": f"Failed to get price tick for {symbol}"}
+
+            if pos.type == mt5.ORDER_TYPE_BUY:
+                order_type = mt5.ORDER_TYPE_SELL
+                price = tick.bid
+            else:
+                order_type = mt5.ORDER_TYPE_BUY
+                price = tick.ask
+
+            request = {
+                "action": mt5.TRADE_ACTION_DEAL,
+                "symbol": symbol,
+                "volume": pos.volume,
+                "type": order_type,
+                "position": ticket,
+                "price": price,
+                "deviation": 50,
+                "magic": 0,
+                "comment": "aries dashboard close",
+                "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": mt5.ORDER_FILLING_IOC,
+            }
+
+            result = mt5.order_send(request)
+            if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+                err = result.comment if result else str(mt5.last_error())
+                return {"ok": False, "error": f"Close failed: {err}"}
+
+            return {"ok": True, "ticket": ticket, "fill_price": result.price}
     except Exception as exc:
         log.exception("Error closing MT5 position: %s", exc)
         return {"ok": False, "error": str(exc)}

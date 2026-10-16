@@ -41,12 +41,9 @@ def _freq(timeframe: str) -> str:
 
 
 def mt5_available() -> bool:
-    try:
-        import importlib.util
+    from .mt5_client import is_available
 
-        return importlib.util.find_spec("MetaTrader5") is not None
-    except Exception:  # pragma: no cover
-        return False
+    return is_available()
 
 
 # ---------------------------------------------------------------------------
@@ -63,24 +60,20 @@ def fetch_ticks_mt5(
 ) -> pd.DataFrame:
     """Download ticks for ``symbol`` between ``start`` and ``end`` (UTC).
 
+    Args:
+        shutdown: retained for backward compatibility; the connection is now
+            always closed by :func:`app.data.mt5_client.session`.
+
     Raises ``RuntimeError`` if the terminal cannot be reached or the copy
     call returns ``None``.
     """
-    import MetaTrader5 as mt5  # Windows-only; imported lazily
+    from .mt5_client import session as mt5_session
 
-    kwargs: dict = {"timeout": timeout_ms}
-    if terminal_path:
-        kwargs["path"] = terminal_path
-    if not mt5.initialize(**kwargs):
-        raise RuntimeError(f"MT5 initialize failed: {mt5.last_error()}")
-    try:
+    with mt5_session(path=terminal_path, timeout_ms=timeout_ms) as mt5:
         ticks = mt5.copy_ticks_range(symbol, start, end, mt5.COPY_TICKS_ALL)
         if ticks is None:
             raise RuntimeError(f"copy_ticks_range({symbol}) returned None: {mt5.last_error()}")
         df = pd.DataFrame(ticks)
-    finally:
-        if shutdown:
-            mt5.shutdown()
     if df.empty:
         return pd.DataFrame(columns=TICK_COLUMNS)
     if "time" in df.columns:
