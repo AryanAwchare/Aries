@@ -162,7 +162,7 @@ def run_fold(name, ohlcv_train, ohlcv_val, ohlcv_test, cot=None,
     best = pick_best(results)
 
     if out_dir is not None:
-        save_result(best, out_dir / name)
+        save_result(best, out_dir / name, features=list(X_train.columns))
 
     proba_test = best.model.predict_proba(X_test)[:, 1]
     y_test_arr = y_test.to_numpy()

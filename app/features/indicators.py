@@ -89,3 +89,35 @@ def volume_zscore(volume: pd.Series, period: int = 50) -> pd.Series:
     mean = volume.rolling(period, min_periods=10).mean()
     std = volume.rolling(period, min_periods=10).std().replace(0, np.nan)
     return ((volume - mean) / std).fillna(0.0)
+
+
+def parkinson_volatility(high: pd.Series, low: pd.Series, period: int = 20) -> pd.Series:
+    """Range-based volatility (Parkinson 1980) — no close-to-close dependence."""
+    if high.empty:
+        return pd.Series([], dtype=float, index=high.index)
+    hl = np.log(high / low.replace(0, np.nan))
+    var = (hl**2).rolling(period, min_periods=max(2, period // 2)).mean() / (4 * np.log(2))
+    return np.sqrt(var.clip(lower=0.0)).fillna(0.0)
+
+
+def garman_klass_volatility(
+    open_: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series, period: int = 20
+) -> pd.Series:
+    """OHLC volatility estimator (Garman & Klass 1980)."""
+    if close.empty:
+        return pd.Series([], dtype=float, index=close.index)
+    hl = np.log(high / low.replace(0, np.nan))
+    co = np.log(close / open_.replace(0, np.nan))
+    var = (0.5 * hl**2 - (2 * np.log(2) - 1) * co**2).rolling(
+        period, min_periods=max(2, period // 2)
+    ).mean()
+    return np.sqrt(var.clip(lower=0.0)).fillna(0.0)
+
+
+def efficiency_ratio(close: pd.Series, period: int = 10) -> pd.Series:
+    """Kaufman efficiency ratio: net move / summed absolute path (0..1)."""
+    if close.empty:
+        return pd.Series([], dtype=float, index=close.index)
+    change = (close - close.shift(period)).abs()
+    path = close.diff().abs().rolling(period, min_periods=max(2, period // 2)).sum()
+    return (change / path.replace(0, np.nan)).fillna(0.0).clip(0.0, 1.0)

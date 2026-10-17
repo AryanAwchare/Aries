@@ -188,16 +188,24 @@ def pick_best(results: list[TrainResult]) -> TrainResult:
     return min(valid, key=lambda r: (r.logloss, -r.auc))
 
 
-def save_result(result: TrainResult, directory: Path) -> Path:
+def save_result(result: TrainResult, directory: Path, features: list[str] | None = None) -> Path:
     import joblib
+
+    from .predict import model_feature_names
 
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     model_path = directory / f"{result.name}.joblib"
     joblib.dump(result.model, model_path)
-    (directory / f"{result.name}.json").write_text(
-        json.dumps({"name": result.name, "calibration": result.calibration, "metrics": result.metrics}, indent=2)
-    )
+    if features is None:
+        features = model_feature_names(result.model)
+    manifest = {
+        "name": result.name,
+        "calibration": result.calibration,
+        "metrics": result.metrics,
+        "features": [str(c) for c in features] if features is not None else None,
+    }
+    (directory / f"{result.name}.json").write_text(json.dumps(manifest, indent=2))
     (directory / "best_model.txt").write_text(result.name)
     log.info("Saved %s -> %s", result.name, model_path)
     return model_path

@@ -15,6 +15,16 @@ import pandas as pd
 
 from ..data.ohlcv import OHLCV_COLUMNS
 from . import indicators as ind
+from .regime import detect_regimes
+
+# Stable numeric encoding of the categorical MarketRegime for tree models.
+_REGIME_CODE: dict[str, float] = {
+    "TRENDING_BEAR": -1.0,
+    "RANGING_LOW_VOL": 0.0,
+    "NEUTRAL": 0.0,
+    "TRENDING_BULL": 1.0,
+    "EXPANSION_HIGH_VOL": 2.0,
+}
 
 
 def calculate_indicator_block(df: pd.DataFrame) -> pd.DataFrame:
@@ -53,6 +63,21 @@ def calculate_indicator_block(df: pd.DataFrame) -> pd.DataFrame:
     # Gap from previous close (session-open jumps)
     prev_close = out["close"].shift(1)
     out["gap_from_prev"] = ((out["open"] - prev_close) / prev_close.replace(0, np.nan)).fillna(0.0)
+
+    # --- Microstructure proxies derivable from OHLCV (see app/data/ticks.py for
+    # true tick microstructure, which needs a feed). All causal.
+    out["parkinson_vol"] = ind.parkinson_volatility(out["high"], out["low"])
+    out["garman_klass_vol"] = ind.garman_klass_volatility(
+        out["open"], out["high"], out["low"], out["close"]
+    )
+    out["efficiency_ratio"] = ind.efficiency_ratio(out["close"])
+    out["signed_body"] = np.sign(out["close"] - out["open"]).astype(float)
+    out["wick_imbalance"] = (out["upper_wick"] - out["lower_wick"]).fillna(0.0)
+
+    # --- Market regime (Phase 1.1) encoded as a single numeric feature ---
+    out["regime_code"] = (
+        detect_regimes(out).map(_REGIME_CODE).astype(float).fillna(0.0)
+    )
 
     # Fill NaNs
     out["atr_pct"]        = out["atr_pct"].fillna(0.0)
@@ -99,6 +124,13 @@ FEATURE_COLUMNS: list[str] = [
     "upper_wick",
     "lower_wick",
     "gap_from_prev",
+    # Microstructure proxies (OHLCV-derived) + regime
+    "parkinson_vol",
+    "garman_klass_vol",
+    "efficiency_ratio",
+    "signed_body",
+    "wick_imbalance",
+    "regime_code",
     # External signals
     "cot_mm_net_z",
     "cot_mm_net_oi",

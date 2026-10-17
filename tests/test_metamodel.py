@@ -8,7 +8,12 @@ import pytest
 xgb = pytest.importorskip("xgboost", reason="xgboost not installed")
 
 from app.metamodel.build_dataset import build_training_data  # noqa: E402
-from app.metamodel.predict import CalibrationTracker  # noqa: E402
+from app.metamodel.predict import (  # noqa: E402
+    CalibrationTracker,
+    MetaModelPredictor,
+    backfill_feature_manifest,
+    read_manifest_features,
+)
 from app.metamodel.train import (  # noqa: E402
     calibrate,
     pick_best,
@@ -68,3 +73,39 @@ def test_calibration_tracker():
     assert bucket["empirical_p"] == pytest.approx(2 / 3, rel=1e-3)
     mace = tracker.mean_abs_calibration_error(report)
     assert mace == pytest.approx(0.75 - 2 / 3, rel=1e-3)
+
+
+def test_feature_manifest_persisted_and_predictor_reindexes(framed, tmp_path):
+    import json
+
+    X_tr, y_tr, _, _ = framed
+    res = train_xgboost(X_tr, y_tr, X_tr, y_tr, n_estimators=30, early_stopping_rounds=5)
+    save_result(res, tmp_path, features=list(X_tr.columns))
+
+    manifest = json.loads((tmp_path / f"{res.name}.json").read_text())
+    assert manifest["features"] == list(X_tr.columns)
+
+    predictor = MetaModelPredictor(tmp_path, threshold=0.6)
+    assert predictor.available
+    assert predictor._features == list(X_tr.columns)
+
+    # Extra keys are ignored and missing keys zero-filled via reindex.
+    row = {c: 0.0 for c in list(X_tr.columns)[3:]}
+    row["brand_new_column"] = 1.0
+    proba = predictor.predict(row)
+    assert 0.0 <= proba <= 1.0
+
+
+def test_backfill_feature_manifest(framed, tmp_path):
+    import joblib
+
+    X_tr, y_tr, _, _ = framed
+    res = train_xgboost(X_tr, y_tr, X_tr, y_tr, n_estimators=30, early_stopping_rounds=5)
+    # Simulate a legacy model dir saved before feature manifests existed.
+    joblib.dump(res.model, tmp_path / "xgboost.joblib")
+    (tmp_path / "best_model.txt").write_text("xgboost")
+    (tmp_path / "xgboost.json").write_text('{"name": "xgboost"}')
+    assert read_manifest_features(tmp_path, "xgboost") is None
+
+    assert backfill_feature_manifest(tmp_path) is not None
+    assert read_manifest_features(tmp_path, "xgboost") == list(X_tr.columns)

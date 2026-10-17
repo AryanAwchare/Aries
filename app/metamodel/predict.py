@@ -17,6 +17,67 @@ from ..logging import get_logger
 log = get_logger(__name__)
 
 
+def model_feature_names(model) -> list[str] | None:
+    """Best-effort ordered feature list recorded on a fitted estimator.
+
+    Handles the plain sklearn/xgboost estimators and our ``_CalibratedModel``
+    wrapper (which exposes the base model as ``.base``).
+    """
+    for m in (model, getattr(model, "base", None)):
+        names = getattr(m, "feature_names_in_", None)
+        if names is not None:
+            return [str(c) for c in names]
+    return None
+
+
+def read_manifest_features(model_dir, name: str) -> list[str] | None:
+    """Ordered training feature list persisted alongside a saved model."""
+    manifest = Path(model_dir) / f"{name}.json"
+    if not manifest.exists():
+        return None
+    try:
+        data = json.loads(manifest.read_text())
+    except (ValueError, OSError):
+        return None
+    feats = data.get("features")
+    return [str(c) for c in feats] if feats else None
+
+
+def backfill_feature_manifest(model_dir) -> Path | None:
+    """Persist the feature list of an already-saved model if the manifest lacks it.
+
+    Pre-feature-manifest models are upgraded in place so live prediction always
+    reindexes to the columns the model was actually trained on. Returns the
+    manifest path if written, else ``None``.
+    """
+    import joblib
+
+    model_dir = Path(model_dir)
+    best = model_dir / "best_model.txt"
+    if not best.exists():
+        return None
+    name = best.read_text().strip()
+    if read_manifest_features(model_dir, name) is not None:
+        return None
+    model_path = model_dir / f"{name}.joblib"
+    if not model_path.exists():
+        return None
+    feats = model_feature_names(joblib.load(model_path))
+    if not feats:
+        return None
+    manifest = model_dir / f"{name}.json"
+    data: dict = {}
+    if manifest.exists():
+        try:
+            data = json.loads(manifest.read_text())
+        except (ValueError, OSError):
+            data = {}
+    data["features"] = feats
+    manifest.write_text(json.dumps(data, indent=2))
+    log.info("Backfilled feature manifest for '%s' (%d features)", name, len(feats))
+    return manifest
+
+
 class MetaModelPredictor:
     """Loads the best trained model once and scores feature rows.
 
@@ -29,6 +90,7 @@ class MetaModelPredictor:
         self.threshold = threshold
         self._model = None
         self._name = "none"
+        self._features: list[str] | None = None
         self._load()
 
     def _load(self) -> None:
@@ -44,6 +106,11 @@ class MetaModelPredictor:
         import joblib
 
         self._model = joblib.load(path)
+        # Prefer the manifest's recorded feature order; fall back to the names
+        # the estimator itself carries (legacy models with no manifest field).
+        self._features = read_manifest_features(self.model_dir, self._name)
+        if self._features is None:
+            self._features = model_feature_names(self._model)
         log.info("Loaded meta-model '%s' from %s", self._name, path)
 
     @property
@@ -56,7 +123,11 @@ class MetaModelPredictor:
 
         if self._model is None:
             return 0.5
-        frame = pd.DataFrame([feature_row])
+        cols = self._features or model_feature_names(self._model)
+        if cols:
+            frame = pd.DataFrame([feature_row]).reindex(columns=cols, fill_value=0.0)
+        else:
+            frame = pd.DataFrame([feature_row])
         return float(self._model.predict_proba(frame)[0, 1])
 
     def confirm(self, feature_row: dict[str, float]) -> tuple[bool, float]:
